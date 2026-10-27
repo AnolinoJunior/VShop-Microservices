@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vshop.ProductApi\Vshop.ProductApi.csproj" />
+    <ProjectReference Include="..\VShop.DiscountApi\VShop.DiscountApi.csproj" />
+  </ItemGroup>
+</Project>

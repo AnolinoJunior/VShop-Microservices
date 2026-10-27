@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/Backend/">
+    <Project Path="VShop.CartiApi/VShop.CartiApi.csproj" Id="866419fe-705d-4c2f-a7c4-8aa40b4d1160" />
+    <Project Path="VShop.CartiApi.Tests/VShop.CartiApi.Tests.csproj" />
+    <Project Path="VShop.DiscountApi/VShop.DiscountApi.csproj" />
+    <Project Path="VShop.OrderApi/VShop.OrderApi.csproj" />
+    <Project Path="Vshop.IdentityServer/Vshop.IdentityServer.csproj" Id="1f3e2b30-1dc7-4f34-b66a-f91495bc303f" />
+    <Project Path="Vshop.ProductApi/Vshop.ProductApi.csproj" />
+  </Folder>
+  <Folder Name="/Frontend/">
+    <Project Path="VShop.Web/VShop.Web.csproj" Id="f6c6cb3a-f55b-41a7-bae7-5e3ca755ef40" />
+  </Folder>
+</Solution>

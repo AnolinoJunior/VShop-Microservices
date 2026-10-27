@@ -1,0 +1,54 @@
+﻿@model IEnumerable<Vshop.Web.Models.ProductViewModel>
+<link rel="stylesheet" href="/css/product.css" asp-append-version="true" />
+
+@{
+    ViewData["Title"] = "Catálogo de Produtos";
+}
+
+<div class="container">
+
+    <h2 class="mb-4">Catálogo de Produtos</h2>
+
+    <div class="row">
+
+        @foreach (var product in Model)
+        {
+            <div class="col-md-4 mb-3">
+
+                <a asp-controller="Home"
+                   asp-action="ProductDetails"
+                   asp-route-id="@product.ProductId"
+                   class="text-decoration-none text-dark">
+
+                    <div class="card h-100 shadow-sm">
+
+                        <img src="@Url.Content($"~/images/products/{product.ImageUrl}")"
+                             class="card-img-top img-thumbnail"
+                             alt="@product.Name"
+                             style="height: 220px; object-fit: contain;" />
+
+                        <div class="card-body">
+
+                            <h5 class="card-title mb-2">
+                                @product.Name
+                            </h5>
+
+                            <p class="card-text text-dark">
+                                <strong>
+                                    @product.Price.ToString("C")
+                                </strong>
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </a>
+
+            </div>
+        }
+
+    </div>
+
+</div>
+    

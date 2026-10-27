@@ -1,0 +1,32 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Vshop.ProductApi.DTOs
+{
+    public class ProductDTO
+    {
+        public int ProductId { get; set; }
+
+        [Required(ErrorMessage = "The Name is Required")]
+        [MinLength(3, ErrorMessage = "The Name must have at least 3 characters")]
+        [MaxLength(50, ErrorMessage = "The Name must have a maximum of 50 characters")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "The Price is Required")]
+        public decimal Price { get; set; }
+
+        [Required(ErrorMessage = "The Description is Required")]
+        [MinLength(5, ErrorMessage = "The Description must have at least 5 characters")]
+        [MaxLength(500, ErrorMessage = "The Description must have a maximum of 500 characters")]
+        public string? Description { get; set; }
+
+        [Required(ErrorMessage = "The Stock is Required")]
+        [Range(1, 99999, ErrorMessage = "The Stock must be between 1 and 99999")]
+        public long Stock { get; set; }
+
+        public string? ImageUrl { get; set; }
+
+        public int CategoryId { get; set; }
+
+        public string? CategoryName { get; set; }
+    }
+}

@@ -1,0 +1,47 @@
+﻿@{
+    ViewData["Title"] = "Carrinho Vazio";
+}
+
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+
+            <div class="mb-4">
+                <i class="bi bi-cart-x"
+                   style="font-size: 80px; color: #6c757d;">
+                </i>
+            </div>
+
+            <h2 class="fw-bold">
+                Seu carrinho está vazio!
+            </h2>
+
+            <p class="text-muted mt-3">
+                Parece que você ainda não adicionou
+                nenhum produto ao seu carrinho.
+            </p>
+
+            <p>
+                Explore nossos produtos e encontre
+                algo que você goste!
+            </p>
+
+            <a asp-controller="Home"
+               asp-action="Index"
+               class="btn btn-primary mt-3">
+                Continuar comprando
+            </a>
+
+            <!-- Botão de retorno igual ao do professor -->
+            <div class="mt-4">
+                <a class="page-link"
+                   asp-area=""
+                   asp-controller="Home"
+                   asp-action="Index">
+                    <h3>Return to Shopping</h3>
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>

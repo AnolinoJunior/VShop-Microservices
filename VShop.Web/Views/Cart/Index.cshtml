@@ -1,0 +1,500 @@
+﻿@model VShop.Web.Models.CartViewModel
+
+@{
+    ViewData["Title"] = "Meu Carrinho";
+}
+
+<div class="container mt-4 mb-5">
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+
+            <i class="fas fa-check-circle"></i>
+            @TempData["SuccessMessage"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Fechar">
+            </button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle"></i>
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+        </div>
+    }
+
+    @if (Model?.CartHeader != null &&
+         Model.CartItems != null &&
+         Model.CartItems.Any())
+    {
+        <div class="card border shadow-sm">
+
+            <!-- CABEÇALHO -->
+            <div class="card-header bg-dark text-white">
+                <div class="row align-items-center">
+
+                    <div class="col-6">
+                        <h5 class="mb-0">
+                            <i class="fas fa-shopping-cart"></i>
+                            Meu Carrinho
+                        </h5>
+                    </div>
+
+                    <div class="col-6 text-end">
+                        <a asp-controller="Home"
+                           asp-action="Index"
+                           class="btn btn-outline-light btn-sm">
+                            Continuar comprando
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- CORPO -->
+            <div class="card-body">
+
+                <!-- CABEÇALHO DAS COLUNAS -->
+                <div class="row text-muted fw-bold border-bottom pb-3 mb-3">
+
+                    <div class="col-md-6">
+                        Produtos
+                    </div>
+
+                    <div class="col-md-2 text-center">
+                        Preço
+                    </div>
+
+                    <div class="col-md-2 text-center">
+                        Quantidade
+                    </div>
+
+                    <div class="col-md-2 text-center">
+                        Ações
+                    </div>
+
+                </div>
+
+                <!-- LISTA DE PRODUTOS -->
+                @foreach (var item in Model.CartItems)
+                {
+                    if (item.Product == null)
+                    {
+                        continue;
+                    }
+
+                    var price = Convert.ToDecimal(item.Product.Price);
+                    var subtotal = price * item.Quantity;
+
+                    // =====================================
+                    // TRATAMENTO DA URL DA IMAGEM
+                    // =====================================
+
+                    var originalImageUrl = item.Product.ImageUrl;
+                    string? imageUrl = null;
+
+                    if (!string.IsNullOrWhiteSpace(originalImageUrl))
+                    {
+                        var path = originalImageUrl.Trim();
+
+                        if (Uri.TryCreate(
+                            path,
+                            UriKind.Absolute,
+                            out var absoluteUri))
+                        {
+                            if (absoluteUri.Scheme == Uri.UriSchemeHttp ||
+                                absoluteUri.Scheme == Uri.UriSchemeHttps)
+                            {
+                                imageUrl = path;
+                            }
+                        }
+                        else
+                        {
+                            if (!path.Contains('/') &&
+                                !path.Contains('\\'))
+                            {
+                                imageUrl = Url.Content(
+                                    "~/images/products/" + path);
+                            }
+                            else
+                            {
+                                imageUrl = Url.Content(
+                                    "~/" + path.TrimStart('~', '/'));
+                            }
+                        }
+                    }
+
+                    <div class="row align-items-center border-bottom py-3">
+
+                        <!-- IMAGEM E DESCRIÇÃO -->
+                        <div class="col-md-6">
+
+                            <div class="row align-items-center">
+
+                                <div class="col-4 col-md-3 text-center">
+
+                                    @if (!string.IsNullOrWhiteSpace(imageUrl))
+                                    {
+                                        <img src="@imageUrl"
+                                             alt="@item.Product.Name"
+                                             class="img-fluid rounded"
+                                             style="max-height: 120px;
+                                        max-width: 100%;
+                                        object-fit: contain;"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+
+                                        <div class="text-muted small"
+                                             style="display: none;">
+                                            <i class="fas fa-image fa-2x mb-2"></i>
+                                            <div>Imagem indisponível</div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted small">
+                                            <i class="fas fa-image fa-2x mb-2"></i>
+                                            <div>Sem imagem</div>
+                                        </div>
+                                    }
+
+                                </div>
+
+                                <div class="col-8 col-md-9">
+
+                                    <h5 class="mb-2">
+                                        @item.Product.Name
+                                    </h5>
+
+                                    <p class="text-muted small mb-0">
+                                        @item.Product.Description
+                                    </p>
+
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- PREÇO UNITÁRIO -->
+                        <div class="col-md-2 text-center">
+
+                            <span class="text-primary fw-bold">
+                                @price.ToString("C")
+                            </span>
+
+                        </div>
+
+                        <!-- QUANTIDADE: DIMINUIR OU AUMENTAR -->
+                        <div class="col-md-2 text-center">
+                            <div class="d-flex justify-content-center align-items-center gap-1">
+                                <form asp-controller="Cart"
+                                      asp-action="UpdateItemQuantity"
+                                      method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                    <input type="hidden" name="quantity" value="@(item.Quantity - 1)" />
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                            title="Diminuir quantidade" aria-label="Diminuir quantidade de @item.Product.Name"
+                                            disabled="@(item.Quantity <= 1)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                </form>
+
+                                <span class="fw-bold mx-2">@item.Quantity</span>
+
+                                <form asp-controller="Cart"
+                                      asp-action="UpdateItemQuantity"
+                                      method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                    <input type="hidden" name="quantity" value="@(item.Quantity + 1)" />
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                            title="Aumentar quantidade" aria-label="Aumentar quantidade de @item.Product.Name"
+                                            disabled="@(item.Quantity == int.MaxValue)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="small text-muted mt-1">
+                                Subtotal: @subtotal.ToString("C")
+                            </div>
+                        </div>
+
+                        <!-- REMOVER PRODUTO -->
+                        <div class="col-md-2 text-center">
+
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-sm"
+                                    title="Remover produto"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#removeItemModal"
+                                    data-product-id="@item.ProductId"
+                                    data-product-name="@item.Product.Name">
+
+                                <i class="fas fa-trash"></i>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+                }
+
+                <!-- CUPOM E TOTAL -->
+                <div class="row align-items-center mt-4">
+
+                    <!-- CUPOM DE DESCONTO -->
+                    <div class="col-md-6">
+
+                        <label class="form-label fw-bold">
+                            Cupom de desconto
+                        </label>
+
+                        <div class="input-group">
+
+                            <form asp-controller="Cart" asp-action="ApplyCoupon" method="post" class="input-group">
+                                @Html.AntiForgeryToken()
+                            <input type="text"
+                                   name="couponCode"
+                                   class="form-control"
+                                   placeholder="Digite seu cupom"
+                                   value="@Model.CartHeader.CouponCode" />
+
+                            <button type="button"
+                                    class="btn btn-info" onclick="this.form.submit()">
+                                Aplicar
+                            </button>
+                            </form>
+                            @if (!string.IsNullOrWhiteSpace(Model.CartHeader.CouponCode))
+                            {
+                                <form asp-controller="Cart" asp-action="DeleteCoupon" method="post" class="mt-2">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">Remover cupom</button>
+                                </form>
+                            }
+                        </div>
+
+                        <small class="text-muted">
+                            Cupons disponíveis em breve.
+                        </small>
+
+                    </div>
+
+                    <!-- TOTAL DO CARRINHO -->
+                    <div class="col-md-6 text-end mt-3 mt-md-0">
+
+                        <div class="text-muted">Subtotal: @Model.CartHeader.SubtotalAmount.ToString("C")</div>
+                        @if (Model.CartHeader.DiscountAmount > 0)
+                        {
+                            <div class="text-success">Desconto: -@Model.CartHeader.DiscountAmount.ToString("C")</div>
+                        }
+                        <h4 class="text-danger fw-bold">
+                            Total:
+                            @Model.CartHeader.TotalAmount.ToString("C")
+                        </h4>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- RODAPÉ -->
+            <div class="card-footer bg-light">
+
+                <div class="row align-items-center">
+
+                    <div class="col-md-6">
+
+                        <a asp-controller="Home"
+                           asp-action="Index"
+                           class="btn btn-outline-secondary">
+
+                            <i class="fas fa-arrow-left"></i>
+                            Voltar à loja
+
+                        </a>
+
+                    </div>
+
+                    <div class="col-md-6 text-end">
+
+                        <a asp-controller="Cart"
+                           asp-action="Checkout"
+                           class="btn btn-primary px-4">
+
+                            <i class="fas fa-credit-card"></i>
+                            Finalizar compra
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================
+             MODAL DE CONFIRMAÇÃO DE REMOÇÃO
+             ===================================== -->
+
+        <div class="modal fade"
+             id="removeItemModal"
+             tabindex="-1"
+             aria-labelledby="removeItemModalLabel"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+
+                <div class="modal-content">
+
+                    <div class="modal-header">
+
+                        <h5 class="modal-title"
+                            id="removeItemModalLabel">
+
+                            <i class="fas fa-trash-alt text-danger me-2"></i>
+                            Remover produto
+
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Fechar">
+                        </button>
+
+                    </div>
+
+                    <div class="modal-body">
+
+                        <p class="mb-2">
+                            Tem certeza de que deseja remover este produto do carrinho?
+                        </p>
+
+                        <p class="fw-bold mb-0"
+                           id="removeProductName">
+                        </p>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+
+                            Cancelar
+
+                        </button>
+
+                        <form asp-controller="Cart"
+                              asp-action="RemoveItem"
+                              method="post"
+                              id="removeItemForm">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="id"
+                                   id="removeProductId" />
+
+                            <button type="submit"
+                                    class="btn btn-danger">
+
+                                <i class="fas fa-trash-alt me-1"></i>
+                                Sim, remover
+
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    }
+    else
+    {
+        <!-- CARRINHO VAZIO -->
+        <div class="text-center mt-5">
+
+            <i class="fas fa-shopping-cart text-muted"
+               style="font-size: 70px;">
+            </i>
+
+            <h3 class="mt-4">
+                Seu carrinho está vazio!
+            </h3>
+
+            <p class="text-muted">
+                Adicione produtos para começar suas compras.
+            </p>
+
+            <a asp-controller="Home"
+               asp-action="Index"
+               class="btn btn-primary mt-3">
+
+                <i class="fas fa-arrow-left"></i>
+                Continuar comprando
+
+            </a>
+
+        </div>
+    }
+
+</div>
+
+@section Scripts {
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+
+            const removeItemModal =
+                document.getElementById("removeItemModal");
+
+            if (!removeItemModal) {
+                return;
+            }
+
+            removeItemModal.addEventListener(
+                "show.bs.modal",
+                function(event) {
+
+                    const button = event.relatedTarget;
+
+                    if (!button) {
+                        return;
+                    }
+
+                    const productId =
+                        button.getAttribute("data-product-id");
+
+                    const productName =
+                        button.getAttribute("data-product-name");
+
+                    document.getElementById("removeProductId").value =
+                        productId || "";
+
+                    document.getElementById("removeProductName").textContent =
+                        productName || "";
+
+                }
+            );
+
+        });
+    </script>
+
+}

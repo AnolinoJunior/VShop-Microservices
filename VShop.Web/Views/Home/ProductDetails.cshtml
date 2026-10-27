@@ -1,0 +1,247 @@
+﻿@model Vshop.Web.Models.ProductViewModel
+
+@{
+    ViewData["Title"] = "Detalhes do Produto";
+}
+
+<link rel="stylesheet"
+      href="~/css/product.css"
+      asp-append-version="true" />
+
+<div class="container mt-4">
+
+    <h3 class="mb-5">Detalhes do Produto</h3>
+
+    <!-- Mensagem de sucesso -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+
+            <i class="fas fa-check-circle"></i>
+            @TempData["SuccessMessage"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Fechar">
+            </button>
+        </div>
+    }
+
+    <!-- Mensagem de erro -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+
+            <i class="fas fa-exclamation-circle"></i>
+            @TempData["ErrorMessage"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Fechar">
+            </button>
+        </div>
+    }
+
+    <div class="row">
+
+        <!-- Imagem do produto -->
+        <div class="col-md-4 mb-4">
+
+            <img class="img-fluid"
+                 src="@Url.Content($"~/images/products/{Model.ImageUrl}")"
+                 alt="@Model.Name" />
+
+        </div>
+
+        <!-- Informações do produto -->
+        <div class="col-md-6">
+
+            <h3>@Model.Name</h3>
+
+            <p class="mb-4">
+                @Model.Description
+            </p>
+
+            <p class="mb-4 text-dark">
+                <strong>
+                    @Model.Price.ToString("C")
+                </strong>
+            </p>
+
+            <!-- Formulário de compra -->
+            <form asp-controller="Home"
+                  asp-action="ProductDetailsPost"
+                  asp-route-id="@Model.ProductId"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <!-- Quantidade -->
+                <div class="mb-4">
+
+                    <label for="quantity"
+                           class="form-label fw-bold">
+                        Quantidade:
+                    </label>
+
+                    <div class="input-group"
+                         style="max-width: 160px;">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                id="decreaseQuantity"
+                                aria-label="Diminuir quantidade">
+                            -
+                        </button>
+
+                        <input type="number"
+                               id="quantity"
+                               name="quantity"
+                               class="form-control text-center"
+                               value="1"
+                               min="1"
+                               step="1"
+                               required />
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                id="increaseQuantity"
+                                aria-label="Aumentar quantidade">
+                            +
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <!-- Total estimado -->
+                <div class="mb-4">
+
+                    <span class="fw-bold">
+                        Total:
+                    </span>
+
+                    <span id="totalPrice"
+                          class="fw-bold text-success">
+                        @Model.Price.ToString("C")
+                    </span>
+
+                </div>
+
+                <div class="row align-items-center">
+
+                    <!-- Voltar ao catálogo -->
+                    <div class="col-sm-6 mb-3">
+
+                        <a asp-controller="Home"
+                           asp-action="Index"
+                           class="btn btn-outline-info">
+
+                            <i class="fas fa-arrow-left"></i>
+                            Back to List
+
+                        </a>
+
+                    </div>
+
+                    <!-- Adicionar ao carrinho -->
+                    <div class="col-sm-6 mb-3">
+
+                        <button type="submit"
+                                class="btn btn-outline-success">
+
+                            <i class="fas fa-shopping-cart"></i>
+                            Add to Cart
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const quantityInput =
+                document.getElementById("quantity");
+
+            const decreaseButton =
+                document.getElementById("decreaseQuantity");
+
+            const increaseButton =
+                document.getElementById("increaseQuantity");
+
+            const totalPrice =
+                document.getElementById("totalPrice");
+
+            const unitPrice = @Model.Price.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture);
+
+            function updateTotal() {
+
+                let quantity = Number(quantityInput.value);
+
+                if (!Number.isSafeInteger(quantity) || quantity < 1) {
+                    quantity = 1;
+                }
+
+                quantityInput.value = quantity;
+
+                const total = unitPrice * quantity;
+
+                totalPrice.textContent =
+                    total.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                    });
+            }
+
+            decreaseButton.addEventListener("click", function () {
+
+                let quantity = Number(quantityInput.value);
+
+                if (Number.isSafeInteger(quantity) && quantity > 1) {
+                    quantityInput.value = quantity - 1;
+                } else {
+                    quantityInput.value = 1;
+                }
+
+                updateTotal();
+            });
+
+            increaseButton.addEventListener("click", function () {
+
+                let quantity = Number(quantityInput.value);
+
+                if (!Number.isSafeInteger(quantity) || quantity < 1) {
+                    quantity = 0;
+                }
+
+                if (quantity < Number.MAX_SAFE_INTEGER) {
+                    quantityInput.value = quantity + 1;
+                }
+
+                updateTotal();
+            });
+
+            quantityInput.addEventListener("change", updateTotal);
+
+            updateTotal();
+        });
+    </script>
+
+}

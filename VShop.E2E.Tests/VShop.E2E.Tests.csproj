@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vshop.IdentityServer\Vshop.IdentityServer.csproj" />
+    <ProjectReference Include="..\Vshop.ProductApi\Vshop.ProductApi.csproj" />
+    <ProjectReference Include="..\VShop.CartiApi\VShop.CartiApi.csproj" />
+    <ProjectReference Include="..\VShop.OrderApi\VShop.OrderApi.csproj" />
+    <ProjectReference Include="..\VShop.DiscountApi\VShop.DiscountApi.csproj" />
+  </ItemGroup>
+</Project>

@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using VShop.OrderApi.Context;
 using VShop.OrderApi.Repositories;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -18,6 +19,8 @@ builder.Services.AddScoped<VShop.OrderApi.Services.OrderPreparationService>();
 builder.Services.AddScoped<VShop.OrderApi.Services.CheckoutSagaService>();
 builder.Services.AddScoped<VShop.OrderApi.Services.SagaRemoteClient>();
 builder.Services.AddHostedService<VShop.OrderApi.Services.CheckoutSagaWorker>();
+builder.Services.AddHostedService<VShop.OrderApi.Services.RabbitMqConsumer>();
+builder.Services.AddScoped<VShop.OrderApi.Services.RabbitMqPublisher>();
 builder.Services.AddHttpClient("CartApi", client => client.BaseAddress = new Uri(
     (builder.Configuration["ServicesUri:CartApi"] ?? throw new InvalidOperationException("ServicesUri:CartApi não configurado.")).TrimEnd('/') + "/"));
 builder.Services.AddHttpClient("SagaIdentity", client => { client.BaseAddress = new Uri(authority.TrimEnd('/') + "/"); client.Timeout = TimeSpan.FromSeconds(10); });

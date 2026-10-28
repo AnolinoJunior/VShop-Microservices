@@ -1,89 +1,52 @@
 @page
 @model Vshop.IdentityServer.Pages.Login.Index
+@{ ViewData["AuthPage"] = true; ViewData["Title"] = "Entrar"; }
 
-<div class="login-page">
-    <div class="lead">
-        <h1>Login</h1>
-        <p>Choose how to login</p>
-    </div>
-
-    <partial name="_ValidationSummary" />
-
-    <div class="row">
-
+<section class="auth-shell" aria-labelledby="auth-title">
+    <div class="auth-card">
+        <header class="auth-header">
+            <img class="auth-logo" src="~/images/vshop2.jpg" alt="VShop" />
+            <h1 id="auth-title">Bem-vindo de volta!</h1>
+            <p>Acesse sua conta para continuar suas compras.</p>
+        </header>
+        <partial name="_ValidationSummary" />
         @if (Model.View.EnableLocalLogin)
         {
-            <div class="col-sm-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h2>Local Account</h2>
-                    </div>
-
-                    <div class="card-body">
-                        <form asp-page="/Account/Login/Index">
-                            <input type="hidden" asp-for="Input.ReturnUrl" />
-
-                            <div class="form-group">
-                                <label asp-for="Input.Username"></label>
-                                <input class="form-control" placeholder="Username" asp-for="Input.Username" autofocus>
-                            </div>
-                            <div class="form-group">
-                                <label asp-for="Input.Password"></label>
-                                <input type="password" class="form-control" placeholder="Password" asp-for="Input.Password" autocomplete="off">
-                            </div>
-                            
-                            @if (Model.View.AllowRememberLogin)
-                            {
-                                <div class="form-group">
-                                    <div class="form-check">
-                                        <input class="form-check-input" asp-for="Input.RememberLogin">
-                                        <label class="form-check-label" asp-for="Input.RememberLogin">
-                                            Remember My Login
-                                        </label>
-                                    </div>
-                                </div>
-                            }
-                            
-                            <button class="btn btn-primary" name="Input.Button" value="login">Login</button>
-                            <button class="btn btn-secondary" name="Input.Button" value="cancel">Cancel</button>
-                        </form>
-                    </div>
+            <form asp-page="/Account/Login/Index" class="auth-form">
+                <input type="hidden" asp-for="Input.ReturnUrl" />
+                <div class="auth-field">
+                    <label asp-for="Input.Username">Nome de usuário</label>
+                    <input class="form-control" asp-for="Input.Username" placeholder="Digite seu usuário" autocomplete="username" autofocus />
                 </div>
-            </div>
+                <div class="auth-field">
+                    <label asp-for="Input.Password">Senha</label>
+                    <input class="form-control" type="password" asp-for="Input.Password" placeholder="Digite sua senha" autocomplete="current-password" />
+                </div>
+                @if (Model.View.AllowRememberLogin)
+                {
+                    <div class="form-check auth-remember">
+                        <input class="form-check-input" asp-for="Input.RememberLogin" />
+                        <label class="form-check-label" asp-for="Input.RememberLogin">Manter minha sessão</label>
+                    </div>
+                }
+                <button class="btn auth-primary" name="Input.Button" value="login">Entrar</button>
+                <button class="btn auth-secondary" name="Input.Button" value="cancel">Cancelar</button>
+            </form>
+            <p class="auth-switch">Ainda não tem conta? <a asp-page="/Account/Create/Index" asp-route-returnUrl="@Model.Input.ReturnUrl">Criar conta</a></p>
         }
-
         @if (Model.View.VisibleExternalProviders.Any())
         {
-            <div class="col-sm-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h2>External Account</h2>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-inline">
-                            @foreach (var provider in Model.View.VisibleExternalProviders)
-                            {
-                                <li class="list-inline-item">
-                                    <a class="btn btn-secondary"
-                                       asp-page="/ExternalLogin/Challenge"
-                                       asp-route-scheme="@provider.AuthenticationScheme"
-                                       asp-route-returnUrl="@Model.Input.ReturnUrl">
-                                        @provider.DisplayName
-                                    </a>
-                                </li>
-                            }
-                        </ul>
-                    </div>
-                </div>
+            <div class="auth-external">
+                <h2>Outras opções de acesso</h2>
+                @foreach (var provider in Model.View.VisibleExternalProviders)
+                {
+                    <a class="btn auth-secondary" asp-page="/ExternalLogin/Challenge" asp-route-scheme="@provider.AuthenticationScheme" asp-route-returnUrl="@Model.Input.ReturnUrl">@provider.DisplayName</a>
+                }
             </div>
         }
-
         @if (!Model.View.EnableLocalLogin && !Model.View.VisibleExternalProviders.Any())
         {
-            <div class="alert alert-warning">
-                <strong>Invalid login request</strong>
-                There are no login schemes configured for this request.
-            </div>
+            <div class="alert alert-warning" role="alert">Não há opções de login disponíveis para esta solicitação.</div>
         }
     </div>
-</div>
+</section>

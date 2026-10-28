@@ -1,4 +1,6 @@
 ﻿
+using System.Net;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,31 +18,27 @@ namespace VShop.CartiApi.Controllers
         private readonly ICartRepository _repository;
         private readonly IHttpClientFactory _clients;
 
-        public CartController(ICartRepository repository, IHttpClientFactory clients)
+        public CartController(
+            ICartRepository repository,
+            IHttpClientFactory clients)
         {
             _repository = repository;
             _clients = clients;
         }
 
         // =====================================
-        // MÉTODO AUXILIAR - USUÁRIO AUTENTICADO
+        // MÉTODOS AUXILIARES - AUTENTICAÇÃO
         // =====================================
 
         private string? GetAuthenticatedUserId()
         {
             return User.FindFirst("sub")?.Value
-                ?? User.FindFirst(
-                    ClaimTypes.NameIdentifier)?.Value;
+                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         }
-
-        // =====================================
-        // MÉTODO AUXILIAR - VALIDAR PROPRIETÁRIO
-        // =====================================
 
         private bool IsCurrentUser(string? userId)
         {
-            var authenticatedUserId =
-                GetAuthenticatedUserId();
+            var authenticatedUserId = GetAuthenticatedUserId();
 
             return !string.IsNullOrWhiteSpace(authenticatedUserId)
                 && !string.IsNullOrWhiteSpace(userId)
@@ -57,9 +55,7 @@ namespace VShop.CartiApi.Controllers
             string id)
         {
             if (!IsCurrentUser(id))
-            {
                 return Forbid();
-            }
 
             var cartDto = await _repository
                 .GetCartByUserIdAsync(id);
@@ -90,18 +86,13 @@ namespace VShop.CartiApi.Controllers
                     "Os dados do carrinho são obrigatórios.");
             }
 
-            var authenticatedUserId =
-                GetAuthenticatedUserId();
+            var authenticatedUserId = GetAuthenticatedUserId();
 
             if (string.IsNullOrWhiteSpace(authenticatedUserId))
-            {
                 return Forbid();
-            }
 
             if (!IsCurrentUser(cartDto.CartHeader.UserId))
-            {
                 return Forbid();
-            }
 
             if (cartDto.CartItems == null ||
                 !cartDto.CartItems.Any())
@@ -125,7 +116,7 @@ namespace VShop.CartiApi.Controllers
         }
 
         // =====================================
-        // 3 - ATUALIZAR QUANTIDADE DO PRODUTO
+        // 3 - ATUALIZAR QUANTIDADE
         // PATCH: api/cart/{userId}/{productId}/quantity
         // =====================================
 
@@ -135,28 +126,21 @@ namespace VShop.CartiApi.Controllers
             int productId,
             [FromBody] int quantity)
         {
-            // Verifica se o carrinho pertence
-            // ao usuário autenticado.
             if (!IsCurrentUser(userId))
-            {
                 return Forbid();
-            }
 
-            // Valida o identificador do produto.
             if (productId <= 0)
             {
                 return BadRequest(
                     "O identificador do produto é inválido.");
             }
 
-            // A quantidade mínima permitida é 1.
             if (quantity < 1)
             {
                 return BadRequest(
                     "A quantidade deve ser maior ou igual a 1.");
             }
 
-            // Atualiza a quantidade no banco de dados.
             var result = await _repository
                 .UpdateItemQuantityAsync(
                     userId,
@@ -183,9 +167,7 @@ namespace VShop.CartiApi.Controllers
             int productId)
         {
             if (!IsCurrentUser(userId))
-            {
                 return Forbid();
-            }
 
             if (productId <= 0)
             {
@@ -197,9 +179,7 @@ namespace VShop.CartiApi.Controllers
                 .DeleteItemFromCartAsync(userId, productId);
 
             if (!result)
-            {
                 return NotFound();
-            }
 
             return NoContent();
         }
@@ -214,98 +194,260 @@ namespace VShop.CartiApi.Controllers
             string userId)
         {
             if (!IsCurrentUser(userId))
-            {
                 return Forbid();
-            }
 
             var result = await _repository
                 .CleanCartAsync(userId);
 
             if (!result)
-            {
                 return NotFound();
-            }
 
             return NoContent();
         }
 
         // =====================================
-        // 6 - APLICAR CUPOM
-        // POST: api/cart/coupon/{userId}
+        // 6 - CONSULTAR SUBTOTAL
+        // GET: api/cart/subtotal
         // =====================================
 
         [HttpGet("subtotal")]
         public async Task<IActionResult> GetSubtotal()
         {
             var userId = GetAuthenticatedUserId();
-            if (string.IsNullOrWhiteSpace(userId)) return Forbid();
-            var subtotal = await _repository.GetSubtotalAsync(userId);
-            return subtotal is null ? NotFound() : Ok(subtotal.Value);
+
+            if (string.IsNullOrWhiteSpace(userId))
+                return Forbid();
+
+            var subtotal = await _repository
+                .GetSubtotalAsync(userId);
+
+            return subtotal is null
+                ? NotFound()
+                : Ok(subtotal.Value);
         }
+
+        // =====================================
+        // 7 - CONSULTAR SUBTOTAL VERIFICADO
+        // GET: api/cart/verified-subtotal
+        // =====================================
 
         [HttpGet("verified-subtotal")]
         public async Task<IActionResult> GetVerifiedSubtotal()
         {
             var userId = GetAuthenticatedUserId();
-            if (string.IsNullOrWhiteSpace(userId)) return Forbid();
+
+            if (string.IsNullOrWhiteSpace(userId))
+                return Forbid();
+
             try
             {
-                var subtotal = await _repository.GetVerifiedSubtotalAsync(userId);
-                return subtotal is null ? NotFound() : Ok(subtotal.Value);
+                var subtotal = await _repository
+                    .GetVerifiedSubtotalAsync(userId);
+
+                return subtotal is null
+                    ? NotFound()
+                    : Ok(subtotal.Value);
             }
-            catch (InvalidOperationException ex) { return StatusCode(StatusCodes.Status503ServiceUnavailable, ex.Message); }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    ex.Message);
+            }
         }
+
+        // =====================================
+        // 8 - SNAPSHOT DO CARRINHO
+        // GET: api/cart/order-snapshot
+        // =====================================
 
         [HttpGet("order-snapshot")]
         public async Task<IActionResult> GetOrderSnapshot()
         {
             var userId = GetAuthenticatedUserId();
-            if (string.IsNullOrWhiteSpace(userId)) return Forbid();
+
+            if (string.IsNullOrWhiteSpace(userId))
+                return Forbid();
+
             try
             {
-                var snapshot = await _repository.GetOrderSnapshotAsync(userId);
-                return snapshot is null ? NotFound("Carrinho vazio ou inexistente.") : Ok(snapshot);
+                var snapshot = await _repository
+                    .GetOrderSnapshotAsync(userId);
+
+                return snapshot is null
+                    ? NotFound("Carrinho vazio ou inexistente.")
+                    : Ok(snapshot);
             }
-            catch (InvalidOperationException ex) { return StatusCode(StatusCodes.Status503ServiceUnavailable, ex.Message); }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    ex.Message);
+            }
         }
+
+        // =====================================
+        // 9 - PREPARAR PEDIDO
+        // POST: api/cart/orders
+        // =====================================
 
         [HttpPost("orders")]
-        public async Task<IActionResult> PrepareOrder([FromBody] PrepareOrderDTO input, CancellationToken cancellationToken)
+        public async Task<IActionResult> PrepareOrder(
+            [FromBody] PrepareOrderDTO input,
+            CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(GetAuthenticatedUserId())) return Forbid();
-            using var request = new HttpRequestMessage(HttpMethod.Post, "api/order/prepare")
+            if (string.IsNullOrWhiteSpace(GetAuthenticatedUserId()))
+                return Forbid();
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                "api/order/prepare")
             {
-                Content = System.Net.Http.Json.JsonContent.Create(input)
+                Content = JsonContent.Create(input)
             };
-            request.Headers.TryAddWithoutValidation("Authorization", Request.Headers.Authorization.ToString());
+
+            request.Headers.TryAddWithoutValidation(
+                "Authorization",
+                Request.Headers.Authorization.ToString());
+
             try
             {
-                using var response = await _clients.CreateClient("OrderApi").SendAsync(request, cancellationToken);
-                var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                return new ContentResult { StatusCode = (int)response.StatusCode, Content = body,
-                    ContentType = response.Content.Headers.ContentType?.ToString() ?? "application/json" };
+                using var response = await _clients
+                    .CreateClient("OrderApi")
+                    .SendAsync(request, cancellationToken);
+
+                var body = await response.Content
+                    .ReadAsStringAsync(cancellationToken);
+
+                return new ContentResult
+                {
+                    StatusCode = (int)response.StatusCode,
+                    Content = body,
+                    ContentType = response.Content.Headers
+                        .ContentType?.ToString()
+                        ?? "application/json"
+                };
             }
-            catch (HttpRequestException) { return StatusCode(StatusCodes.Status503ServiceUnavailable, "A OrderApi está indisponível."); }
+            catch (HttpRequestException)
+            {
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    "A OrderApi está indisponível.");
+            }
         }
 
+        // =====================================
+        // 10 - EXECUTAR CHECKOUT COM SAGA
+        // POST: api/cart/orders/{id}/checkout
+        // =====================================
+
         [HttpPost("orders/{id:long}/checkout")]
-        public async Task<IActionResult> CheckoutOrder(long id, [FromBody] CheckoutSagaRequest input, CancellationToken cancellationToken)
+        public async Task<IActionResult> CheckoutOrder(
+            long id,
+            [FromBody] CheckoutSagaRequest input,
+            CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(GetAuthenticatedUserId())) return Forbid();
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"api/order/{id}/checkout")
+            if (string.IsNullOrWhiteSpace(GetAuthenticatedUserId()))
+                return Forbid();
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"api/order/{id}/checkout")
             {
-                Content = System.Net.Http.Json.JsonContent.Create(input)
+                Content = JsonContent.Create(input)
             };
-            request.Headers.TryAddWithoutValidation("Authorization", Request.Headers.Authorization.ToString());
+
+            request.Headers.TryAddWithoutValidation(
+                "Authorization",
+                Request.Headers.Authorization.ToString());
+
             try
             {
-                using var response = await _clients.CreateClient("OrderApi").SendAsync(request, cancellationToken);
-                return new ContentResult { StatusCode = (int)response.StatusCode,
-                    Content = await response.Content.ReadAsStringAsync(cancellationToken),
-                    ContentType = response.Content.Headers.ContentType?.ToString() ?? "application/json" };
+                using var response = await _clients
+                    .CreateClient("OrderApi")
+                    .SendAsync(request, cancellationToken);
+
+                var body = await response.Content
+                    .ReadAsStringAsync(cancellationToken);
+
+                return new ContentResult
+                {
+                    StatusCode = (int)response.StatusCode,
+                    Content = body,
+                    ContentType = response.Content.Headers
+                        .ContentType?.ToString()
+                        ?? "application/json"
+                };
             }
-            catch (HttpRequestException) { return StatusCode(StatusCodes.Status503ServiceUnavailable, "A OrderApi está indisponível."); }
+            catch (HttpRequestException)
+            {
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    "A OrderApi está indisponível.");
+            }
         }
+
+        // =====================================
+        // 11 - RECUPERAR PEDIDO POR IDEMPOTÊNCIA
+        // GET: api/cart/orders/by-idempotency-key/{key}
+        // =====================================
+
+        [HttpGet("orders/by-idempotency-key/{key}")]
+        public async Task<IActionResult> GetOrderByIdempotencyKey(
+            string key,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetAuthenticatedUserId();
+
+            if (string.IsNullOrWhiteSpace(userId))
+                return Forbid();
+
+            if (string.IsNullOrWhiteSpace(key) ||
+                key.Length > 100)
+            {
+                return BadRequest(
+                    "Chave de idempotência inválida.");
+            }
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                "api/order/by-idempotency-key/" +
+                Uri.EscapeDataString(key));
+
+            request.Headers.TryAddWithoutValidation(
+                "Authorization",
+                Request.Headers.Authorization.ToString());
+
+            try
+            {
+                using var response = await _clients
+                    .CreateClient("OrderApi")
+                    .SendAsync(request, cancellationToken);
+
+                var body = await response.Content
+                    .ReadAsStringAsync(cancellationToken);
+
+                return new ContentResult
+                {
+                    StatusCode = (int)response.StatusCode,
+                    Content = body,
+                    ContentType = response.Content.Headers
+                        .ContentType?.ToString()
+                        ?? "application/json"
+                };
+            }
+            catch (HttpRequestException)
+            {
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    "A OrderApi está indisponível.");
+            }
+        }
+
+        // =====================================
+        // 12 - APLICAR CUPOM
+        // POST: api/cart/coupon/{userId}
+        // =====================================
 
         [HttpPost("coupon/{userId}")]
         public async Task<IActionResult> ApplyCoupon(
@@ -313,9 +455,7 @@ namespace VShop.CartiApi.Controllers
             [FromBody] string couponCode)
         {
             if (!IsCurrentUser(userId))
-            {
                 return Forbid();
-            }
 
             if (string.IsNullOrWhiteSpace(couponCode))
             {
@@ -323,31 +463,46 @@ namespace VShop.CartiApi.Controllers
                     "O código do cupom é obrigatório.");
             }
 
-            var subtotal = await _repository.GetSubtotalAsync(userId);
-            if (subtotal is null) return NotFound("Carrinho não encontrado.");
+            var subtotal = await _repository
+                .GetSubtotalAsync(userId);
+
+            if (subtotal is null)
+            {
+                return NotFound(
+                    "Carrinho não encontrado.");
+            }
+
             if (subtotal < CouponRules.MinimumSubtotal)
-                return BadRequest($"O subtotal mínimo para utilizar cupons é de R$ {CouponRules.MinimumSubtotal:N2}.");
+            {
+                return BadRequest(
+                    $"O subtotal mínimo para utilizar cupons é de " +
+                    $"R$ {CouponRules.MinimumSubtotal:N2}.");
+            }
 
             bool result;
+
             try
             {
-                result = await _repository.ApplyCouponAsync(userId, couponCode.Trim());
+                result = await _repository
+                    .ApplyCouponAsync(
+                        userId,
+                        couponCode.Trim());
             }
             catch (InvalidOperationException ex)
             {
-                return StatusCode(StatusCodes.Status503ServiceUnavailable, ex.Message);
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    ex.Message);
             }
 
             if (!result)
-            {
                 return NotFound();
-            }
 
             return Ok();
         }
 
         // =====================================
-        // 7 - REMOVER CUPOM
+        // 13 - REMOVER CUPOM
         // DELETE: api/cart/coupon/{userId}
         // =====================================
 
@@ -356,36 +511,57 @@ namespace VShop.CartiApi.Controllers
             string userId)
         {
             if (!IsCurrentUser(userId))
-            {
                 return Forbid();
-            }
 
-            var result = await _repository.DeleteCouponAsync(userId);
+            var result = await _repository
+                .DeleteCouponAsync(userId);
 
             if (!result)
-            {
                 return NotFound();
-            }
 
             return NoContent();
         }
 
+        // =====================================
+        // 14 - CHECKOUT LEGADO
+        // POST: api/cart/checkout
+        // =====================================
+
         [HttpPost("checkout")]
-        public async Task<ActionResult<CheckoutHeaderDTO>> Checkout([FromBody] CheckoutHeaderDTO checkout)
+        public async Task<ActionResult<CheckoutHeaderDTO>> Checkout(
+            [FromBody] CheckoutHeaderDTO checkout)
         {
-            var authenticatedUserId = GetAuthenticatedUserId();
-            if (string.IsNullOrWhiteSpace(authenticatedUserId) || checkout == null)
-                return BadRequest("Os dados do checkout são obrigatórios.");
-            if (!IsCurrentUser(checkout.UserId)) return Forbid();
-            if (!ModelState.IsValid) return ValidationProblem(ModelState);
+            var authenticatedUserId =
+                GetAuthenticatedUserId();
+
+            if (string.IsNullOrWhiteSpace(authenticatedUserId) ||
+                checkout == null)
+            {
+                return BadRequest(
+                    "Os dados do checkout são obrigatórios.");
+            }
+
+            if (!IsCurrentUser(checkout.UserId))
+                return Forbid();
+
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
             try
             {
-                var result = await _repository.CheckoutAsync(checkout);
-                return result is null ? BadRequest("O carrinho não possui produtos válidos.") : Ok(result);
+                var result = await _repository
+                    .CheckoutAsync(checkout);
+
+                return result is null
+                    ? BadRequest(
+                        "O carrinho não possui produtos válidos.")
+                    : Ok(result);
             }
             catch (InvalidOperationException ex)
             {
-                return StatusCode(StatusCodes.Status503ServiceUnavailable, ex.Message);
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    ex.Message);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿<ul class="navbar-nav">
+﻿<ul class="navbar-nav flex-row gap-3">
 
     @if (User.Identity?.IsAuthenticated == true)
     {
@@ -24,6 +24,9 @@
                asp-controller="Home">
                 Login
             </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-controller="Home" asp-action="CreateAccount">Criar conta</a>
         </li>
     }
 

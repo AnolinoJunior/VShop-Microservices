@@ -41,6 +41,12 @@ var identityServerUri =
     ?? throw new InvalidOperationException(
         "ServicesUri:IdentityServer não foi configurado.");
 
+if (!Uri.TryCreate(identityServerUri, UriKind.Absolute, out var identityServerAddress) ||
+    (identityServerAddress.Scheme != Uri.UriSchemeHttps && identityServerAddress.Scheme != Uri.UriSchemeHttp) ||
+    !string.IsNullOrEmpty(identityServerAddress.Query) || !string.IsNullOrEmpty(identityServerAddress.Fragment) ||
+    !string.IsNullOrEmpty(identityServerAddress.UserInfo))
+    throw new InvalidOperationException("ServicesUri:IdentityServer deve ser uma URL HTTP(S) absoluta, sem credenciais, consulta ou fragmento.");
+
 var clientSecret =
     builder.Configuration["Client:Secret"]
     ?? throw new InvalidOperationException(
@@ -154,6 +160,16 @@ builder.Services
         // ===========================
         // EVENTOS
         // ===========================
+
+        options.Events.OnRedirectToIdentityProvider = context =>
+        {
+            if (context.Properties.Items.Remove("vshop_register"))
+            {
+                context.ProtocolMessage.SetParameter("vshop_register", "1");
+                context.ProtocolMessage.Prompt = "login";
+            }
+            return Task.CompletedTask;
+        };
 
         options.Events.OnRemoteFailure = context =>
         {

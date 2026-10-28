@@ -10,9 +10,9 @@ using VShop.CartiApi.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ===========================
+// =====================================
 // CONTROLLERS + JSON
-// ===========================
+// =====================================
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -20,29 +20,52 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler =
             ReferenceHandler.IgnoreCycles;
     });
+
 builder.Services.AddHttpContextAccessor();
+
+// =====================================
+// HTTP CLIENTS
+// =====================================
+
+// DiscountApi
 builder.Services.AddHttpClient("DiscountApi", client =>
 {
-    var discountApiUri = builder.Configuration["ServicesUri:DiscountApi"]
-        ?? throw new InvalidOperationException("ServicesUri:DiscountApi não foi configurado.");
-    client.BaseAddress = new Uri(discountApiUri.TrimEnd('/') + "/");
-});
-builder.Services.AddHttpClient("ProductApi", client =>
-{
-    var productApiUri = builder.Configuration["ServicesUri:ProductApi"]
-        ?? throw new InvalidOperationException("ServicesUri:ProductApi não foi configurado.");
-    client.BaseAddress = new Uri(productApiUri.TrimEnd('/') + "/");
-});
-builder.Services.AddHttpClient("OrderApi", client =>
-{
-    var uri = builder.Configuration["ServicesUri:OrderApi"]
-        ?? throw new InvalidOperationException("ServicesUri:OrderApi não foi configurado.");
-    client.BaseAddress = new Uri(uri.TrimEnd('/') + "/");
+    var discountApiUri =
+        builder.Configuration["ServicesUri:DiscountApi"]
+        ?? throw new InvalidOperationException(
+            "ServicesUri:DiscountApi não foi configurado.");
+
+    client.BaseAddress = new Uri(
+        discountApiUri.TrimEnd('/') + "/");
 });
 
-// ===========================
-// SWAGGER
-// ===========================
+// ProductApi
+builder.Services.AddHttpClient("ProductApi", client =>
+{
+    var productApiUri =
+        builder.Configuration["ServicesUri:ProductApi"]
+        ?? throw new InvalidOperationException(
+            "ServicesUri:ProductApi não foi configurado.");
+
+    client.BaseAddress = new Uri(
+        productApiUri.TrimEnd('/') + "/");
+});
+
+// OrderApi
+builder.Services.AddHttpClient("OrderApi", client =>
+{
+    var orderApiUri =
+        builder.Configuration["ServicesUri:OrderApi"]
+        ?? throw new InvalidOperationException(
+            "ServicesUri:OrderApi não foi configurado.");
+
+    client.BaseAddress = new Uri(
+        orderApiUri.TrimEnd('/') + "/");
+});
+
+// =====================================
+// SWAGGER + AUTENTICAÇÃO JWT
+// =====================================
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -54,22 +77,26 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1"
     });
 
+    // Configuração HTTP Bearer
     c.AddSecurityDefinition(
         "Bearer",
         new OpenApiSecurityScheme
         {
             Description =
-                "Digite Bearer, espaço e depois o token JWT.",
+                "Informe somente o token JWT, sem o prefixo Bearer.",
 
             Name = "Authorization",
 
             In = ParameterLocation.Header,
 
-            Type = SecuritySchemeType.ApiKey,
+            Type = SecuritySchemeType.Http,
 
-            Scheme = "Bearer"
+            Scheme = "bearer",
+
+            BearerFormat = "JWT"
         });
 
+    // Exige autenticação nos endpoints do Swagger
     c.AddSecurityRequirement(
         new OpenApiSecurityRequirement
         {
@@ -82,34 +109,37 @@ builder.Services.AddSwaggerGen(c =>
                         Id = "Bearer"
                     }
                 },
-                new List<string>()
+                Array.Empty<string>()
             }
         });
 });
 
-// ===========================
-// BANCO DE DADOS
-// ===========================
+// =====================================
+// BANCO DE DADOS - SQL SERVER
+// =====================================
 
 var connectionString =
-    builder.Configuration.GetConnectionString("DefaultConnection")
+    builder.Configuration.GetConnectionString(
+        "DefaultConnection")
     ?? throw new InvalidOperationException(
         "Connection string 'DefaultConnection' não foi configurada.");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
+{
+    options.UseSqlServer(connectionString);
+});
 
-// ===========================
+// =====================================
 // AUTOMAPPER
-// ===========================
+// =====================================
 
 builder.Services.AddAutoMapper(
     cfg => { },
     typeof(MappingProfile).Assembly);
 
-// ===========================
+// =====================================
 // CORS
-// ===========================
+// =====================================
 
 builder.Services.AddCors(options =>
 {
@@ -121,22 +151,17 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ===========================
+// =====================================
 // REPOSITORIES
-// ===========================
+// =====================================
 
-builder.Services.AddScoped<ICartRepository, CartRepository>();
+builder.Services.AddScoped<
+    ICartRepository,
+    CartRepository>();
 
-// ===========================
-// SERVICES
-// ===========================
-
-// Adicionaremos os serviços específicos
-// quando criarmos essa camada no CartApi.
-
-// ===========================
-// AUTENTICAÇÃO JWT
-// ===========================
+// =====================================
+// AUTENTICAÇÃO JWT - IDENTITYSERVER
+// =====================================
 
 builder.Services
     .AddAuthentication(
@@ -148,21 +173,23 @@ builder.Services
             ?? throw new InvalidOperationException(
                 "ServicesUri:IdentityServer não foi configurado.");
 
-        // Preserva os nomes originais das claims
+        // Mantém os nomes originais das claims
         options.MapInboundClaims = false;
 
         options.TokenValidationParameters =
             new TokenValidationParameters
             {
                 ValidateAudience = false,
+
                 NameClaimType = "name",
+
                 RoleClaimType = "role"
             };
     });
 
-// ===========================
+// =====================================
 // AUTORIZAÇÃO
-// ===========================
+// =====================================
 
 builder.Services.AddAuthorization(options =>
 {
@@ -170,21 +197,22 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireAuthenticatedUser();
 
+        // Exige o escopo da CartApi
         policy.RequireClaim(
             "scope",
             "Vshop.CartApi");
     });
 });
 
-// ===========================
-// APP
-// ===========================
+// =====================================
+// BUILD
+// =====================================
 
 var app = builder.Build();
 
-// ===========================
-// HTTP REQUEST PIPELINE
-// ===========================
+// =====================================
+// SWAGGER - APENAS DEVELOPMENT
+// =====================================
 
 if (app.Environment.IsDevelopment())
 {
@@ -192,17 +220,26 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// =====================================
+// HTTP REQUEST PIPELINE
+// =====================================
+
 app.UseHttpsRedirection();
 
 // CORS
 app.UseCors("CorsPolicy");
 
-// Primeiro autentica o usuário
+// Autenticação
 app.UseAuthentication();
 
-// Depois verifica as permissões
+// Autorização
 app.UseAuthorization();
 
+// Controllers
 app.MapControllers();
+
+// =====================================
+// EXECUTAR APLICAÇÃO
+// =====================================
 
 app.Run();

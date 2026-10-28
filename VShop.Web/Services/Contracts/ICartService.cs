@@ -1,14 +1,38 @@
 ﻿
+using System.Text.Json;
 using VShop.Web.Models;
 
 namespace VShop.Web.Services.Contracts
 {
     public interface ICartService
     {
-        Task<System.Text.Json.JsonElement> PrepareOrderAsync(PrepareOrderRequest request, string token);
-        Task<System.Text.Json.JsonElement> CheckoutOrderAsync(long orderId, bool simulateDecline, string token);
         // =====================================
-        // 1 - BUSCAR CARRINHO PELO USUÁRIO
+        // 1 - PREPARAR PEDIDO
+        // =====================================
+
+        Task<JsonElement> PrepareOrderAsync(
+            PrepareOrderRequest request,
+            string token);
+
+        // =====================================
+        // 2 - EXECUTAR CHECKOUT COM SAGA
+        // =====================================
+
+        Task<JsonElement> CheckoutOrderAsync(
+            long orderId,
+            bool simulateDecline,
+            string token);
+
+        // =====================================
+        // 3 - RECUPERAR PEDIDO POR IDEMPOTÊNCIA
+        // =====================================
+
+        Task<JsonElement?> GetOrderByIdempotencyKeyAsync(
+            string idempotencyKey,
+            string token);
+
+        // =====================================
+        // 4 - BUSCAR CARRINHO PELO USUÁRIO
         // =====================================
 
         Task<CartViewModel?> GetCartByUserIdAsync(
@@ -16,7 +40,7 @@ namespace VShop.Web.Services.Contracts
             string token);
 
         // =====================================
-        // 2 - ADICIONAR PRODUTO AO CARRINHO
+        // 5 - ADICIONAR PRODUTO AO CARRINHO
         // =====================================
 
         Task<CartViewModel?> AddItemToCartAsync(
@@ -24,7 +48,7 @@ namespace VShop.Web.Services.Contracts
             string token);
 
         // =====================================
-        // 3 - ATUALIZAR CARRINHO
+        // 6 - ATUALIZAR CARRINHO
         // =====================================
 
         Task<CartViewModel?> UpdateCartAsync(
@@ -32,7 +56,7 @@ namespace VShop.Web.Services.Contracts
             string token);
 
         // =====================================
-        // 4 - ATUALIZAR QUANTIDADE DO PRODUTO
+        // 7 - ATUALIZAR QUANTIDADE DO PRODUTO
         // =====================================
 
         Task<bool> UpdateItemQuantityAsync(
@@ -42,7 +66,7 @@ namespace VShop.Web.Services.Contracts
             string token);
 
         // =====================================
-        // 5 - REMOVER PRODUTO DO CARRINHO
+        // 8 - REMOVER PRODUTO DO CARRINHO
         // =====================================
 
         Task<bool> RemoveItemFromCartAsync(
@@ -51,7 +75,7 @@ namespace VShop.Web.Services.Contracts
             string token);
 
         // =====================================
-        // 6 - APLICAR CUPOM DE DESCONTO
+        // 9 - APLICAR CUPOM DE DESCONTO
         // =====================================
 
         Task<bool> ApplyCouponAsync(
@@ -60,7 +84,7 @@ namespace VShop.Web.Services.Contracts
             string token);
 
         // =====================================
-        // 7 - REMOVER CUPOM
+        // 10 - REMOVER CUPOM
         // =====================================
 
         Task<bool> DeleteCouponAsync(
@@ -68,7 +92,7 @@ namespace VShop.Web.Services.Contracts
             string token);
 
         // =====================================
-        // 8 - LIMPAR CARRINHO
+        // 11 - LIMPAR CARRINHO
         // =====================================
 
         Task<bool> ClearCartAsync(
@@ -76,7 +100,7 @@ namespace VShop.Web.Services.Contracts
             string token);
 
         // =====================================
-        // 9 - CHECKOUT (FUTURAMENTE)
+        // 12 - CHECKOUT LEGADO
         // =====================================
 
         Task<CartViewModel?> CheckoutAsync(

@@ -1,40 +1,36 @@
 @page
 @model Vshop.IdentityServer.Pages.Create.Index
+@{ ViewData["AuthPage"] = true; ViewData["Title"] = "Criar conta"; }
 
-<div class="login-page">
-    <div class="lead">
-        <h1>Create Account</h1>
+<section class="auth-shell" aria-labelledby="auth-title">
+    <div class="auth-card">
+        <header class="auth-header">
+            <img class="auth-logo" src="~/images/vshop2.jpg" alt="VShop" />
+            <h1 id="auth-title">Crie sua conta</h1>
+            <p>Preencha seus dados para começar a comprar.</p>
+        </header>
+        <partial name="_ValidationSummary" />
+        <form asp-page="/Account/Create/Index" class="auth-form">
+            <input type="hidden" asp-for="Input.ReturnUrl" />
+            <div class="auth-field">
+                <label asp-for="Input.Username">Nome de usuário</label>
+                <input class="form-control" asp-for="Input.Username" placeholder="Escolha seu usuário" autocomplete="username" autofocus />
+            </div>
+            <div class="auth-field">
+                <label asp-for="Input.Name">Nome</label>
+                <input class="form-control" asp-for="Input.Name" placeholder="Como podemos chamar você?" autocomplete="name" />
+            </div>
+            <div class="auth-field">
+                <label asp-for="Input.Email">E-mail</label>
+                <input class="form-control" type="email" asp-for="Input.Email" placeholder="seu@email.com" autocomplete="email" />
+            </div>
+            <div class="auth-field">
+                <label asp-for="Input.Password">Senha</label>
+                <input class="form-control" type="password" asp-for="Input.Password" placeholder="Crie uma senha" autocomplete="new-password" />
+            </div>
+            <button class="btn auth-primary" name="Input.Button" value="create">Criar conta</button>
+            <button class="btn auth-secondary" name="Input.Button" value="cancel">Cancelar</button>
+        </form>
+        <p class="auth-switch">Já tem uma conta? <a asp-page="/Account/Login/Index" asp-route-returnUrl="@Model.Input.ReturnUrl" asp-route-registrationCompleted="true">Entrar</a></p>
     </div>
-
-    <partial name="_ValidationSummary" />
-
-    <div class="row">
-
-        <div class="col-sm-6">
-            <form asp-page="/Account/Create/Index">
-                <input type="hidden" asp-for="Input.ReturnUrl" />
-
-                <div class="form-group">
-                    <label asp-for="Input.Username"></label>
-                    <input class="form-control" placeholder="Username" asp-for="Input.Username" autofocus>
-                </div>
-                <div class="form-group">
-                    <label asp-for="Input.Password"></label>
-                    <input type="password" class="form-control" placeholder="Password" asp-for="Input.Password" autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label asp-for="Input.Name"></label>
-                    <input type="text" class="form-control" placeholder="Name" asp-for="Input.Name">
-                </div>
-                <div class="form-group">
-                    <label asp-for="Input.Email"></label>
-                    <input type="email" class="form-control" placeholder="Email" asp-for="Input.Email" >
-                </div>
-
-                <button class="btn btn-primary" name="Input.Button" value="create">Create</button>
-                <button class="btn btn-secondary" name="Input.Button" value="cancel">Cancel</button>
-            </form>
-        </div>
-        
-    </div>
-</div>
+</section>

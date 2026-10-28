@@ -1,3 +1,47 @@
 @model VShop.Web.Models.CartViewModel
-@{ ViewData["Title"] = "Checkout concluído"; }
-<div class="container py-5 text-center"><div class="alert alert-success"><h2>Checkout concluído</h2><p>O checkout demonstrativo foi validado com sucesso.</p></div><p>Não houve pagamento nem criação de pedido. O carrinho foi preservado.</p><a asp-controller="Home" asp-action="Index" class="btn btn-primary">Voltar à loja</a></div>
+
+@{
+    ViewData["Title"] = "Pedido confirmado";
+}
+
+<div class="container py-5 text-center">
+
+    <div class="alert alert-success">
+
+        <h2>Pedido confirmado!</h2>
+
+        <p>
+            Seu pedido
+            <strong>#@ViewBag.OrderId</strong>
+            foi confirmado com sucesso.
+        </p>
+
+        <p>
+            Pagamento simulado aprovado.
+            Nenhuma cobrança real foi realizada.
+        </p>
+
+    </div>
+
+    @if (ViewBag.CartCleared != true)
+    {
+        <div class="alert alert-warning">
+
+            O pedido foi confirmado, mas não foi
+            possível garantir a limpeza do carrinho.
+
+            Não finalize os mesmos itens novamente
+            antes de conferir seus pedidos.
+
+        </div>
+    }
+
+    <a asp-controller="Home"
+       asp-action="Index"
+       class="btn btn-primary">
+
+        Voltar à loja
+
+    </a>
+
+</div>

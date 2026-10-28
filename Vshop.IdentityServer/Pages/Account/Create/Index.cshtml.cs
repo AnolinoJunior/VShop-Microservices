@@ -1,14 +1,13 @@
-// Copyright (c) Duende Software. All rights reserved.
-// See LICENSE in the project root for license information.
-
-using Duende.IdentityServer;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
-using Duende.IdentityServer.Test;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
+using Vshop.IdentityServer.Configuration;
+using Vshop.IdentityServer.Data;
 
 namespace Vshop.IdentityServer.Pages.Create;
 
@@ -16,106 +15,78 @@ namespace Vshop.IdentityServer.Pages.Create;
 [AllowAnonymous]
 public class Index : PageModel
 {
-    private readonly TestUserStore _users;
+    private readonly UserManager<ApplicationUser> _users;
+    private readonly RoleManager<IdentityRole> _roles;
+    private readonly ApplicationDbContext _db;
     private readonly IIdentityServerInteractionService _interaction;
 
     [BindProperty]
-    public InputModel Input { get; set; } = default!;
+    public InputModel Input { get; set; } = new();
 
-    public Index(
-        IIdentityServerInteractionService interaction,
-        TestUserStore? users = null)
+    public Index(UserManager<ApplicationUser> users, RoleManager<IdentityRole> roles,
+        ApplicationDbContext db, IIdentityServerInteractionService interaction)
     {
-        // this is where you would plug in your own custom identity management library (e.g. ASP.NET Identity)
-        _users = users ?? throw new InvalidOperationException("Please call 'AddTestUsers(TestUsers.Users)' on the IIdentityServerBuilder in Startup or remove the TestUserStore from the AccountController.");
-            
+        _users = users;
+        _roles = roles;
+        _db = db;
         _interaction = interaction;
     }
 
-    public IActionResult OnGet(string? returnUrl)
+    public async Task<IActionResult> OnGet(string? returnUrl)
     {
+        if (!await IsSafeReturnUrl(returnUrl)) return BadRequest();
         Input = new InputModel { ReturnUrl = returnUrl };
         return Page();
     }
-        
+
     public async Task<IActionResult> OnPost()
     {
-        // check if we are in the context of an authorization request
-        var context = await _interaction.GetAuthorizationContextAsync(Input.ReturnUrl);
-
-        // the user clicked the "cancel" button
+        if (!await IsSafeReturnUrl(Input.ReturnUrl)) return BadRequest();
         if (Input.Button != "create")
+            return RedirectToPage("/Account/Login/Index", new { returnUrl = Input.ReturnUrl, registrationCompleted = true });
+        if (!ModelState.IsValid) return Page();
+
+        if (!await _roles.RoleExistsAsync(IdentityConfiguration.Client))
         {
-            if (context != null)
-            {
-                // if the user cancels, send a result back into IdentityServer as if they 
-                // denied the consent (even if this client does not require consent).
-                // this will send back an access denied OIDC error response to the client.
-                await _interaction.DenyAuthorizationAsync(context, AuthorizationError.AccessDenied);
-
-                // we can trust model.ReturnUrl since GetAuthorizationContextAsync returned non-null
-                if (context.IsNativeClient())
-                {
-                    // The client is native, so this change in how to
-                    // return the response is for better UX for the end user.
-                    return this.LoadingPage(Input.ReturnUrl);
-                }
-
-                return Redirect(Input.ReturnUrl ?? "~/");
-            }
-            else
-            {
-                // since we don't have a valid context, then we just go back to the home page
-                return Redirect("~/");
-            }
+            ModelState.AddModelError(string.Empty, "O cadastro está indisponível. Tente novamente mais tarde.");
+            return Page();
         }
 
-        if (_users.FindByUsername(Input.Username) != null)
+        // Serialize the email check and insert; Identity's default email index is not unique.
+        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        if (await _users.FindByEmailAsync(Input.Email!.Trim()) != null)
         {
-            ModelState.AddModelError("Input.Username", "Invalid username");
+            ModelState.AddModelError("Input.Email", "Este e-mail já está cadastrado.");
+            return Page();
         }
 
-        if (ModelState.IsValid)
+        var user = new ApplicationUser
         {
-            var user = _users.CreateUser(Input.Username, Input.Password, Input.Name, Input.Email);
-
-            // issue authentication cookie with subject ID and username
-            var isuser = new IdentityServerUser(user.SubjectId)
-            {
-                DisplayName = user.Username
-            };
-
-            await HttpContext.SignInAsync(isuser);
-
-            if (context != null)
-            {
-                if (context.IsNativeClient())
-                {
-                    // The client is native, so this change in how to
-                    // return the response is for better UX for the end user.
-                    return this.LoadingPage(Input.ReturnUrl);
-                }
-
-                // we can trust Input.ReturnUrl since GetAuthorizationContextAsync returned non-null
-                return Redirect(Input.ReturnUrl ?? "~/");
-            }
-
-            // request for a local page
-            if (Url.IsLocalUrl(Input.ReturnUrl))
-            {
-                return Redirect(Input.ReturnUrl);
-            }
-            else if (string.IsNullOrEmpty(Input.ReturnUrl))
-            {
-                return Redirect("~/");
-            }
-            else
-            {
-                // user might have clicked on a malicious link - should be logged
-                throw new ArgumentException("invalid return URL");
-            }
+            UserName = Input.Username!.Trim(),
+            Email = Input.Email!.Trim(),
+            FirstName = Input.Name?.Trim() ?? string.Empty
+        };
+        var result = await _users.CreateAsync(user, Input.Password!);
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+                ModelState.AddModelError(string.Empty, error.Description);
+            return Page();
         }
 
-        return Page();
+        result = await _users.AddToRoleAsync(user, IdentityConfiguration.Client);
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+                ModelState.AddModelError(string.Empty, error.Description);
+            return Page();
+        }
+
+        await transaction.CommitAsync();
+        return RedirectToPage("/Account/Login/Index", new { returnUrl = Input.ReturnUrl, registrationCompleted = true });
     }
+
+    private async Task<bool> IsSafeReturnUrl(string? returnUrl) =>
+        string.IsNullOrEmpty(returnUrl) || Url.IsLocalUrl(returnUrl) ||
+        await _interaction.GetAuthorizationContextAsync(returnUrl) != null;
 }

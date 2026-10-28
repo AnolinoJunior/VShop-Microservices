@@ -1,29 +1,369 @@
+
 @model VShop.Web.Models.CartViewModel
-@{ ViewData["Title"] = "Checkout"; }
+
+@{
+    ViewData["Title"] = "Finalizar compra";
+}
+
 <style>
     .checkout-validation .field-validation-valid,
-    .checkout-validation .validation-summary-valid { display: none; }
+    .checkout-validation .validation-summary-valid {
+        display: none;
+    }
+
     .checkout-validation .field-validation-error,
-    .checkout-validation .validation-summary-errors { display: block; }
+    .checkout-validation .validation-summary-errors {
+        display: block;
+    }
 </style>
+
 <div class="container py-4 checkout-validation">
-    <h2>Finalizar compra</h2>
-    <div class="alert alert-info">Checkout demonstrativo: nenhum pagamento será processado e o carrinho não será consumido.</div>
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <div class="row g-4">
-        <div class="col-md-7"><form asp-action="Checkout" method="post" class="card shadow-sm checkout-validation" onsubmit="this.classList.add('submitted'); if (!$(this).valid()) { this.classList.remove('submitted'); return false; } this.querySelector('button[type=submit]').disabled=true;"><div class="card-body">
-            @Html.AntiForgeryToken()<h5>Dados do cliente</h5>
-            <div class="row"><div class="col-md-6 mb-3"><label asp-for="CartHeader.FirstName" class="form-label">Nome</label><input asp-for="CartHeader.FirstName" class="form-control" /><span asp-validation-for="CartHeader.FirstName" class="text-danger"></span></div><div class="col-md-6 mb-3"><label asp-for="CartHeader.LastName" class="form-label">Sobrenome</label><input asp-for="CartHeader.LastName" class="form-control" /><span asp-validation-for="CartHeader.LastName" class="text-danger"></span></div></div>
-            <div class="mb-3"><label asp-for="CartHeader.Email" class="form-label">E-mail</label><input asp-for="CartHeader.Email" class="form-control" /><span asp-validation-for="CartHeader.Email" class="text-danger"></span></div>
-            <div class="mb-3"><label asp-for="CartHeader.Telephone" class="form-label">Telefone</label><input asp-for="CartHeader.Telephone" class="form-control" /><span asp-validation-for="CartHeader.Telephone" class="text-danger"></span></div>
-            <button type="submit" class="btn btn-primary">Confirmar checkout demonstrativo</button>
-        </div></form></div>
-        <div class="col-md-5"><div class="card shadow-sm"><div class="card-body"><h5>Resumo</h5>
-            @foreach (var item in Model.CartItems.Where(i => i.Product != null)) { <div class="d-flex justify-content-between border-bottom py-2"><span>@item.Product!.Name (x@(item.Quantity))</span><span>@((Convert.ToDecimal(item.Product.Price) * item.Quantity).ToString("C"))</span></div> }
-            <div class="mt-3">Subtotal: <strong>@Model.CartHeader.SubtotalAmount.ToString("C")</strong></div>
-            @if (!string.IsNullOrWhiteSpace(Model.CartHeader.CouponCode)) { <div class="text-muted">Cupom: @Model.CartHeader.CouponCode</div><div class="text-success">Desconto: -@Model.CartHeader.DiscountAmount.ToString("C")</div> }
-            <div class="fs-4 text-danger mt-2">Total: @Model.CartHeader.TotalAmount.ToString("C")</div>
-        </div></div></div>
+
+    <h2 class="mb-4">Finalizar compra</h2>
+
+    <!-- INFORMAÇÃO SOBRE O PAGAMENTO -->
+    <div class="alert alert-info" role="alert">
+        <strong>Ambiente de demonstração:</strong>
+        seu pedido será registrado e o estoque será atualizado
+        após a confirmação da compra.
+
+        O pagamento é simulado.
+        Nenhuma cobrança real será realizada.
     </div>
+
+    <div class="row g-4">
+
+        <!-- FORMULÁRIO -->
+        <div class="col-md-7">
+
+            <form asp-controller="Cart"
+                  asp-action="Checkout"
+                  method="post"
+                  id="checkoutForm"
+                  class="card shadow-sm checkout-validation">
+
+                @Html.AntiForgeryToken()
+
+                <div class="card-body">
+
+                    <h5 class="mb-4">Dados do cliente</h5>
+
+                    <!-- ERROS DO CHECKOUT -->
+                    <div asp-validation-summary="ModelOnly"
+                         class="text-danger mb-3"
+                         role="alert">
+                    </div>
+
+                    <!-- NOME E SOBRENOME -->
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+
+                            <label asp-for="CartHeader.FirstName"
+                                   class="form-label">
+                                Nome
+                            </label>
+
+                            <input asp-for="CartHeader.FirstName"
+                                   class="form-control"
+                                   maxlength="100"
+                                   autocomplete="given-name"
+                                   required />
+
+                            <span asp-validation-for="CartHeader.FirstName"
+                                  class="text-danger">
+                            </span>
+
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+
+                            <label asp-for="CartHeader.LastName"
+                                   class="form-label">
+                                Sobrenome
+                            </label>
+
+                            <input asp-for="CartHeader.LastName"
+                                   class="form-control"
+                                   maxlength="100"
+                                   autocomplete="family-name"
+                                   required />
+
+                            <span asp-validation-for="CartHeader.LastName"
+                                  class="text-danger">
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- E-MAIL -->
+                    <div class="mb-3">
+
+                        <label asp-for="CartHeader.Email"
+                               class="form-label">
+                            E-mail
+                        </label>
+
+                        <input asp-for="CartHeader.Email"
+                               type="email"
+                               class="form-control"
+                               placeholder="exemplo@email.com"
+                               maxlength="200"
+                               autocomplete="email"
+                               required />
+
+                        <span asp-validation-for="CartHeader.Email"
+                              class="text-danger">
+                        </span>
+
+                    </div>
+
+                    <!-- CELULAR -->
+                    <div class="mb-4">
+
+                        <label asp-for="CartHeader.Telephone"
+                               class="form-label">
+                            Celular
+                        </label>
+
+                        <input asp-for="CartHeader.Telephone"
+                               type="tel"
+                               class="form-control"
+                               placeholder="(19) 99999-9999"
+                               maxlength="15"
+                               inputmode="numeric"
+                               autocomplete="tel"
+                               pattern="\([1-9][0-9]\) 9[0-9]{4}-[0-9]{4}"
+                               title="Informe um celular com DDD. Exemplo: (19) 99999-9999"
+                               required />
+
+                        <span asp-validation-for="CartHeader.Telephone"
+                              class="text-danger">
+                        </span>
+
+                        <small class="text-muted">
+                            Informe o DDD e os 9 dígitos do celular.
+                        </small>
+
+                    </div>
+
+                    <!-- BOTÃO DE FINALIZAÇÃO -->
+                    <button type="submit"
+                            id="btnCheckout"
+                            class="btn btn-primary w-100">
+
+                        <i class="bi bi-bag-check me-1"></i>
+                        Finalizar compra
+
+                    </button>
+
+                    <div class="text-muted small text-center mt-3">
+                        Ao finalizar, o pedido será enviado para
+                        processamento e confirmação.
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+        <!-- RESUMO DO PEDIDO -->
+        <div class="col-md-5">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <h5 class="mb-3">Resumo do pedido</h5>
+
+                    @if (Model.CartItems != null &&
+                         Model.CartItems.Any(i => i.Product != null))
+                    {
+                        @foreach (var item in Model.CartItems
+                            .Where(i => i.Product != null))
+                        {
+                            <div class="d-flex justify-content-between
+                                        border-bottom py-2">
+
+                                <span>
+                                    @item.Product!.Name
+                                    (x@(item.Quantity))
+                                </span>
+
+                                <span>
+                                    @((Convert.ToDecimal(item.Product.Price)
+                                        * item.Quantity).ToString("C"))
+                                </span>
+
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">
+                            Nenhum produto no carrinho.
+                        </p>
+                    }
+
+                    <!-- SUBTOTAL -->
+                    <div class="mt-3 d-flex justify-content-between">
+
+                        <span>Subtotal:</span>
+
+                        <strong>
+                            @Model.CartHeader.SubtotalAmount.ToString("C")
+                        </strong>
+
+                    </div>
+
+                    <!-- CUPOM E DESCONTO -->
+                    @if (!string.IsNullOrWhiteSpace(
+                        Model.CartHeader.CouponCode))
+                    {
+                        <div class="d-flex justify-content-between
+                                    text-muted mt-2">
+
+                            <span>Cupom:</span>
+
+                            <span>
+                                @Model.CartHeader.CouponCode
+                            </span>
+
+                        </div>
+
+                        <div class="d-flex justify-content-between
+                                    text-success mt-2">
+
+                            <span>Desconto:</span>
+
+                            <span>
+                                -@Model.CartHeader.DiscountAmount.ToString("C")
+                            </span>
+
+                        </div>
+                    }
+
+                    <hr />
+
+                    <!-- TOTAL -->
+                    <div class="d-flex justify-content-between
+                                align-items-center fs-4 text-danger mt-2">
+
+                        <span>Total:</span>
+
+                        <strong>
+                            @Model.CartHeader.TotalAmount.ToString("C")
+                        </strong>
+
+                    </div>
+
+                    <div class="text-muted small mt-3">
+                        O valor será utilizado na simulação
+                        de pagamento. Nenhuma cobrança real
+                        será efetuada.
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
 </div>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const form = document.getElementById("checkoutForm");
+            const telefone = document.getElementById("CartHeader_Telephone");
+            const botao = document.getElementById("btnCheckout");
+
+            // =====================================
+            // MÁSCARA AUTOMÁTICA DO CELULAR
+            // =====================================
+
+            function formatarTelefone(valor) {
+
+                const numeros = valor.replace(/\D/g, "").slice(0, 11);
+
+                if (numeros.length <= 2) {
+                    return numeros;
+                }
+
+                if (numeros.length <= 7) {
+                    return `(${numeros.slice(0, 2)}) ${numeros.slice(2)}`;
+                }
+
+                return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7)}`;
+            }
+
+            if (telefone) {
+
+                telefone.value = formatarTelefone(telefone.value);
+
+                telefone.addEventListener("input", function () {
+
+                    this.value = formatarTelefone(this.value);
+
+                    this.setCustomValidity("");
+
+                });
+            }
+
+            // =====================================
+            // VALIDAÇÃO E PREVENÇÃO DE CLIQUE DUPLO
+            // =====================================
+
+            if (form) {
+
+                form.addEventListener("submit", function (event) {
+
+                    if (!form.checkValidity()) {
+
+                        event.preventDefault();
+
+                        form.reportValidity();
+
+                        return;
+                    }
+
+                    if (window.jQuery &&
+                        jQuery.validator &&
+                        !jQuery(form).valid()) {
+
+                        event.preventDefault();
+
+                        return;
+                    }
+
+                    if (form.dataset.enviando === "true") {
+
+                        event.preventDefault();
+
+                        return;
+                    }
+
+                    form.dataset.enviando = "true";
+
+                    if (botao) {
+
+                        botao.disabled = true;
+
+                        botao.textContent = "Processando pedido...";
+
+                    }
+
+                });
+            }
+
+        });
+    </script>
+}

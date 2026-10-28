@@ -46,8 +46,15 @@ public class Index : PageModel
         _events = events;
     }
 
-    public async Task<IActionResult> OnGet(string? returnUrl)
+    public async Task<IActionResult> OnGet(string? returnUrl, bool registrationCompleted = false)
     {
+        var authorization = await _interaction.GetAuthorizationContextAsync(returnUrl);
+        if (!registrationCompleted && authorization?.Parameters.Get("vshop_register") == "1" &&
+            authorization.Client.EnableLocalLogin)
+        {
+            return RedirectToPage("/Account/Create/Index", new { returnUrl });
+        }
+
         await BuildModelAsync(returnUrl);
 
         if (View.IsExternalLoginOnly)

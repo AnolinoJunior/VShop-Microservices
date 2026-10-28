@@ -200,6 +200,21 @@ namespace VShop.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult CreateAccount()
+        {
+            if (User.Identity?.IsAuthenticated == true)
+                return RedirectToAction(nameof(Index));
+
+            var properties = new AuthenticationProperties
+            {
+                RedirectUri = Url.Action(nameof(Index), "Home")
+            };
+            properties.Items["vshop_register"] = "1";
+            return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
+        }
+
         // =====================================
         // 6 - LOGOUT
         // =====================================

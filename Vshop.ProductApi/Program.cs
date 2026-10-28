@@ -117,6 +117,7 @@ builder.Services.AddScoped<
     ProductService>();
 builder.Services.AddScoped<StockReservationService>();
 builder.Services.AddHostedService<StockExpirationWorker>();
+builder.Services.AddHostedService<RabbitMqOrderConsumer>();
 
 // ===========================
 // AUTENTICAÇÃO JWT

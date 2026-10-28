@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -45,7 +46,7 @@ namespace VShop.Web.Controllers
         }
 
         // =====================================
-        // 2 - ATUALIZAR QUANTIDADE DO PRODUTO
+        // 2 - ATUALIZAR QUANTIDADE
         // =====================================
 
         [HttpPost]
@@ -54,7 +55,6 @@ namespace VShop.Web.Controllers
             int productId,
             int quantity)
         {
-            // Valida os dados recebidos.
             if (productId <= 0 || quantity < 1)
             {
                 TempData["ErrorMessage"] =
@@ -63,23 +63,16 @@ namespace VShop.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Obtém o ID do usuário autenticado.
             var userId = GetUserId();
 
             if (string.IsNullOrWhiteSpace(userId))
-            {
                 return Challenge();
-            }
 
-            // Obtém o token JWT.
             var token = await GetAccessToken();
 
             if (string.IsNullOrWhiteSpace(token))
-            {
                 return Challenge();
-            }
 
-            // Atualiza a quantidade na CartApi.
             var result = await _cartService
                 .UpdateItemQuantityAsync(
                     userId,
@@ -98,12 +91,11 @@ namespace VShop.Web.Controllers
                     "Não foi possível atualizar a quantidade do produto.";
             }
 
-            // Recarrega o carrinho com os novos valores.
             return RedirectToAction(nameof(Index));
         }
 
         // =====================================
-        // 3 - REMOVER PRODUTO DO CARRINHO
+        // 3 - REMOVER PRODUTO
         // =====================================
 
         [HttpPost]
@@ -111,23 +103,17 @@ namespace VShop.Web.Controllers
         public async Task<IActionResult> RemoveItem(int id)
         {
             if (id <= 0)
-            {
                 return BadRequest("ID do produto inválido.");
-            }
 
             var userId = GetUserId();
 
             if (string.IsNullOrWhiteSpace(userId))
-            {
                 return Challenge();
-            }
 
             var token = await GetAccessToken();
 
             if (string.IsNullOrWhiteSpace(token))
-            {
                 return Challenge();
-            }
 
             var result = await _cartService
                 .RemoveItemFromCartAsync(
@@ -150,42 +136,65 @@ namespace VShop.Web.Controllers
             return View("RemoveItem", id);
         }
 
+        // =====================================
+        // 4 - APLICAR CUPOM
+        // =====================================
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ApplyCoupon(string couponCode)
+        public async Task<IActionResult> ApplyCoupon(
+            string couponCode)
         {
-            if (string.IsNullOrWhiteSpace(couponCode) || couponCode.Trim().Length > 50)
+            if (string.IsNullOrWhiteSpace(couponCode) ||
+                couponCode.Trim().Length > 50)
             {
-                TempData["ErrorMessage"] = "Informe um código de cupom válido.";
+                TempData["ErrorMessage"] =
+                    "Informe um código de cupom válido.";
+
                 return RedirectToAction(nameof(Index));
             }
 
             var userId = GetUserId();
             var token = await GetAccessToken();
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token)) return Challenge();
+
+            if (string.IsNullOrWhiteSpace(userId) ||
+                string.IsNullOrWhiteSpace(token))
+                return Challenge();
 
             try
             {
-                var cart = await _cartService.GetCartByUserIdAsync(userId, token);
-                if (cart == null || !await _cartService.ApplyCouponAsync(cart, couponCode, token))
+                var cart = await _cartService
+                    .GetCartByUserIdAsync(userId, token);
+
+                if (cart == null ||
+                    !await _cartService.ApplyCouponAsync(
+                        cart, couponCode, token))
                 {
-                    TempData["ErrorMessage"] = "Cupom inexistente, inativo ou inválido.";
+                    TempData["ErrorMessage"] =
+                        "Cupom inexistente, inativo ou inválido.";
                 }
                 else
                 {
-                    TempData["SuccessMessage"] = "Cupom aplicado com sucesso!";
+                    TempData["SuccessMessage"] =
+                        "Cupom aplicado com sucesso!";
                 }
             }
             catch (HttpRequestException)
             {
-                TempData["ErrorMessage"] = "Não foi possível validar o cupom no momento.";
+                TempData["ErrorMessage"] =
+                    "Não foi possível validar o cupom no momento.";
             }
             catch (InvalidOperationException ex)
             {
                 TempData["ErrorMessage"] = ex.Message;
             }
+
             return RedirectToAction(nameof(Index));
         }
+
+        // =====================================
+        // 5 - REMOVER CUPOM
+        // =====================================
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -193,81 +202,325 @@ namespace VShop.Web.Controllers
         {
             var userId = GetUserId();
             var token = await GetAccessToken();
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token)) return Challenge();
 
-            if (await _cartService.DeleteCouponAsync(userId, token))
-                TempData["SuccessMessage"] = "Cupom removido com sucesso!";
+            if (string.IsNullOrWhiteSpace(userId) ||
+                string.IsNullOrWhiteSpace(token))
+                return Challenge();
+
+            if (await _cartService.DeleteCouponAsync(
+                userId, token))
+            {
+                TempData["SuccessMessage"] =
+                    "Cupom removido com sucesso!";
+            }
             else
-                TempData["ErrorMessage"] = "Não foi possível remover o cupom.";
+            {
+                TempData["ErrorMessage"] =
+                    "Não foi possível remover o cupom.";
+            }
 
             return RedirectToAction(nameof(Index));
         }
+
+        // =====================================
+        // 6 - CHECKOUT GET
+        // =====================================
 
         [HttpGet]
         public async Task<IActionResult> Checkout()
         {
             var cart = await GetCartByUser();
-            if (cart?.CartHeader == null || cart.CartItems == null || !cart.CartItems.Any())
+
+            if (cart?.CartHeader == null ||
+                cart.CartItems == null ||
+                !cart.CartItems.Any())
             {
-                TempData["ErrorMessage"] = "Adicione produtos ao carrinho antes de finalizar.";
+                TempData["ErrorMessage"] =
+                    "Adicione produtos ao carrinho antes de finalizar.";
+
                 return RedirectToAction(nameof(Index));
             }
-            cart.CartHeader.FirstName = User.FindFirst("given_name")?.Value ?? string.Empty;
-            cart.CartHeader.LastName = User.FindFirst("family_name")?.Value ?? string.Empty;
-            cart.CartHeader.Email = User.FindFirst("email")?.Value ?? string.Empty;
+
+            cart.CartHeader.FirstName =
+                User.FindFirst("given_name")?.Value
+                ?? string.Empty;
+
+            cart.CartHeader.LastName =
+                User.FindFirst("family_name")?.Value
+                ?? string.Empty;
+
+            cart.CartHeader.Email =
+                User.FindFirst("email")?.Value
+                ?? string.Empty;
+
+            // Mantém a chave para a mesma tentativa de compra.
+            if (TempData.Peek("CheckoutIdempotencyKey") is not string key ||
+                string.IsNullOrWhiteSpace(key))
+            {
+                TempData["CheckoutIdempotencyKey"] =
+                    Guid.NewGuid().ToString("N");
+            }
+
             return View(cart);
         }
+
+        // =====================================
+        // 7 - CHECKOUT POST COM RECUPERAÇÃO
+        // =====================================
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Checkout(CartViewModel model)
         {
             var submittedHeader = model?.CartHeader ?? new CartHeaderViewModel();
+
             if (!ModelState.IsValid)
             {
                 var current = await GetCartByUser();
-                if (current != null)
+                if (current?.CartHeader != null)
+                    CopyCustomerData(current.CartHeader, submittedHeader);
+
+                return View("Checkout", current ?? new CartViewModel
                 {
-                    current.CartHeader.FirstName = submittedHeader.FirstName;
-                    current.CartHeader.LastName = submittedHeader.LastName;
-                    current.CartHeader.Email = submittedHeader.Email;
-                    current.CartHeader.Telephone = submittedHeader.Telephone;
-                }
-                return View(model: current ?? new CartViewModel { CartHeader = submittedHeader });
+                    CartHeader = submittedHeader
+                });
             }
 
             var userId = GetUserId();
             var token = await GetAccessToken();
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token)) return Challenge();
+
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+                return Challenge();
+
             var cart = await _cartService.GetCartByUserIdAsync(userId, token);
             if (cart?.CartHeader == null || cart.CartItems == null || !cart.CartItems.Any())
             {
                 TempData["ErrorMessage"] = "O carrinho está vazio.";
                 return RedirectToAction(nameof(Index));
             }
-            cart.CartHeader.FirstName = submittedHeader.FirstName;
-            cart.CartHeader.LastName = submittedHeader.LastName;
-            cart.CartHeader.Email = submittedHeader.Email;
-            cart.CartHeader.Telephone = submittedHeader.Telephone;
+
+            CopyCustomerData(cart.CartHeader, submittedHeader);
+
+            var key = TempData.Peek("CheckoutIdempotencyKey") as string;
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                key = Guid.NewGuid().ToString("N");
+                TempData["CheckoutIdempotencyKey"] = key;
+            }
+
             try
             {
-                var result = await _cartService.CheckoutAsync(cart.CartHeader, token);
-                return result?.CartHeader == null ? View("Checkout", cart) : View("CheckoutCompleted", result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                return View("Checkout", cart);
+                // Antes de preparar outro pedido, consulte a chave atual.
+                var existing = await _cartService.GetOrderByIdempotencyKeyAsync(key, token);
+                if (existing.HasValue)
+                    return await HandleRecoveredOrderAsync(existing.Value, cart, userId, token);
+
+                var request = new PrepareOrderRequest
+                {
+                    FirstName = submittedHeader.FirstName,
+                    LastName = submittedHeader.LastName,
+                    Email = submittedHeader.Email,
+                    Telephone = submittedHeader.Telephone,
+                    IdempotencyKey = key
+                };
+
+                var prepared = await _cartService.PrepareOrderAsync(request, token);
+                if (!TryGetInt64(prepared, "orderHeaderId", out var orderId) || orderId <= 0)
+                    throw new InvalidOperationException("A OrderApi não retornou um identificador de pedido válido.");
+
+                // false = pagamento simulado aprovado; nunca cobrar pagamento real aqui.
+                var checkout = await _cartService.CheckoutOrderAsync(orderId, false, token);
+                var phase = GetString(checkout, "phase");
+                var status = GetString(checkout, "orderStatus");
+
+                if (EqualsIgnoreCase(phase, "Completed") && EqualsIgnoreCase(status, "Confirmed"))
+                    return await CompleteCheckoutAsync(orderId, cart, userId, token);
+
+                if (EqualsIgnoreCase(phase, "Failed"))
+                {
+                    // A saga terminou com falha. Uma nova tentativa precisa de outra chave.
+                    TempData["CheckoutIdempotencyKey"] = Guid.NewGuid().ToString("N");
+                    return CheckoutError(cart,
+                        $"O pedido #{orderId} falhou. O carrinho foi mantido. " +
+                        "Confirme a compensação antes de tentar novamente.");
+                }
+
+                return CheckoutError(cart,
+                    $"O pedido #{orderId} ainda está em processamento. " +
+                    "Não faça outra tentativa até confirmar o resultado.");
             }
             catch (HttpRequestException)
             {
-                ModelState.AddModelError(string.Empty, "Os serviços estão indisponíveis. Tente novamente.");
-                return View("Checkout", cart);
+                // Uma falha de rede NÃO prova que o pedido não foi criado.
+                // Tenta consultar a mesma chave sem gerar outra.
+                try
+                {
+                    var recovered = await _cartService.GetOrderByIdempotencyKeyAsync(key, token);
+                    if (recovered.HasValue)
+                        return await HandleRecoveredOrderAsync(recovered.Value, cart, userId, token);
+                }
+                catch (HttpRequestException)
+                {
+                    // Estado desconhecido: preservar a chave e o carrinho.
+                }
+                catch (JsonException)
+                {
+                    // Resposta de recuperação inválida: não iniciar outra compra.
+                }
+
+                return CheckoutError(cart,
+                    "Não foi possível confirmar o resultado da compra. " +
+                    "A chave da tentativa foi preservada. Não tente novamente até consultar o pedido.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return CheckoutError(cart, ex.Message);
+            }
+            catch (JsonException)
+            {
+                return CheckoutError(cart,
+                    "A API retornou uma resposta inesperada. " +
+                    "Não inicie outra compra até verificar o pedido.");
             }
         }
 
+        private async Task<IActionResult> HandleRecoveredOrderAsync(
+            JsonElement order,
+            CartViewModel cart,
+            string userId,
+            string token)
+        {
+            if (!TryGetInt64(order, "orderHeaderId", out var orderId) || orderId <= 0)
+                return CheckoutError(cart, "Pedido recuperado sem identificador válido.");
+
+            var status = GetString(order, "status");
+            if (EqualsIgnoreCase(status, "Confirmed"))
+                return await CompleteCheckoutAsync(orderId, cart, userId, token);
+
+            if (EqualsIgnoreCase(status, "Failed") ||
+                EqualsIgnoreCase(status, "Cancelled") ||
+                EqualsIgnoreCase(status, "Canceled"))
+            {
+                // Só libere nova tentativa quando a falha estiver definitivamente encerrada.
+                return CheckoutError(cart,
+                    $"O pedido #{orderId} está com status {status}. " +
+                    "Confira se a compensação foi concluída antes de tentar novamente.");
+            }
+
+            // Um pedido Pending pode estar em processamento pela Saga.
+            // Não iniciar uma segunda Saga automaticamente.
+            return CheckoutError(cart,
+                $"O pedido #{orderId} já existe e está com status {status ?? "desconhecido"}. " +
+                "Aguarde ou consulte seus pedidos antes de tentar novamente.");
+        }
+
+        private async Task<IActionResult> CompleteCheckoutAsync(
+            long orderId,
+            CartViewModel cart,
+            string userId,
+            string token)
+        {
+            ViewBag.OrderId = orderId;
+            ViewBag.CartCleared = false;
+
+            try
+            {
+                ViewBag.CartCleared = await _cartService.ClearCartAsync(userId, token);
+            }
+            catch (HttpRequestException)
+            {
+                // Pedido confirmado, mas limpeza não garantida.
+            }
+
+            TempData.Remove("CheckoutIdempotencyKey");
+            return View("CheckoutCompleted", cart);
+        }
+
+        private IActionResult CheckoutError(CartViewModel cart, string message)
+        {
+            ModelState.AddModelError(string.Empty, message);
+            return View("Checkout", cart);
+        }
+
+        private static bool EqualsIgnoreCase(string? left, string right) =>
+            string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+        private static void CopyCustomerData(
+            CartHeaderViewModel destination,
+            CartHeaderViewModel source)
+        {
+            destination.FirstName = source.FirstName;
+            destination.LastName = source.LastName;
+            destination.Email = source.Email;
+            destination.Telephone = source.Telephone;
+        }
+
         // =====================================
-        // 4 - BUSCAR CARRINHO DO USUÁRIO
+        // 8 - MÉTODOS AUXILIARES DO PEDIDO
+        // =====================================
+
+        private async Task<JsonDocument> PrepareOrderDocument(
+            PrepareOrderRequest input,
+            string token)
+        {
+            var response = await _cartService
+                .PrepareOrderAsync(input, token);
+
+            return JsonDocument.Parse(response.GetRawText());
+        }
+
+        private static string? GetString(
+            JsonElement obj,
+            string name)
+        {
+            if (obj.ValueKind != JsonValueKind.Object)
+                return null;
+
+            foreach (var prop in obj.EnumerateObject())
+            {
+                if (string.Equals(
+                    prop.Name,
+                    name,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return prop.Value.ValueKind ==
+                        JsonValueKind.String
+                        ? prop.Value.GetString()
+                        : null;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool TryGetInt64(
+            JsonElement obj,
+            string name,
+            out long result)
+        {
+            result = 0;
+
+            if (obj.ValueKind != JsonValueKind.Object)
+                return false;
+
+            foreach (var prop in obj.EnumerateObject())
+            {
+                if (string.Equals(
+                    prop.Name,
+                    name,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return prop.Value.ValueKind ==
+                        JsonValueKind.Number &&
+                        prop.Value.TryGetInt64(out result);
+                }
+            }
+
+            return false;
+        }
+
+        // =====================================
+        // 9 - BUSCAR CARRINHO
         // =====================================
 
         private async Task<CartViewModel?> GetCartByUser()
@@ -275,9 +528,7 @@ namespace VShop.Web.Controllers
             var userId = GetUserId();
 
             if (string.IsNullOrWhiteSpace(userId))
-            {
                 return null;
-            }
 
             var token = await GetAccessToken();
 
@@ -291,13 +542,7 @@ namespace VShop.Web.Controllers
                 .GetCartByUserIdAsync(userId, token);
 
             if (cart?.CartHeader == null)
-            {
                 return null;
-            }
-
-            // =====================================
-            // RECALCULAR TOTAL DO CARRINHO
-            // =====================================
 
             decimal totalAmount = 0m;
 
@@ -318,23 +563,34 @@ namespace VShop.Web.Controllers
                 }
             }
 
-            cart.CartHeader.SubtotalAmount = Convert.ToDouble(totalAmount);
-            var discount = Convert.ToDecimal(cart.CartHeader.DiscountAmount);
-            cart.CartHeader.DiscountAmount = Convert.ToDouble(Math.Min(discount, totalAmount));
-            cart.CartHeader.TotalAmount =
-                Convert.ToDouble(Math.Max(0m, totalAmount - discount));
+            cart.CartHeader.SubtotalAmount =
+                Convert.ToDouble(totalAmount);
 
-            if (!string.IsNullOrWhiteSpace(cart.CartHeader.CouponCode) && totalAmount < 50m)
+            var discount =
+                Convert.ToDecimal(cart.CartHeader.DiscountAmount);
+
+            cart.CartHeader.DiscountAmount =
+                Convert.ToDouble(
+                    Math.Min(discount, totalAmount));
+
+            cart.CartHeader.TotalAmount =
+                Convert.ToDouble(
+                    Math.Max(0m, totalAmount - discount));
+
+            if (!string.IsNullOrWhiteSpace(
+                    cart.CartHeader.CouponCode) &&
+                totalAmount < 50m)
             {
                 TempData["ErrorMessage"] =
-                    "O subtotal mínimo de R$ 50,00 não foi atingido. O desconto não foi aplicado.";
+                    "O subtotal mínimo de R$ 50,00 não foi atingido. " +
+                    "O desconto não foi aplicado.";
             }
 
             return cart;
         }
 
         // =====================================
-        // 5 - OBTER TOKEN DE ACESSO
+        // 10 - TOKEN JWT
         // =====================================
 
         private async Task<string?> GetAccessToken()
@@ -344,7 +600,7 @@ namespace VShop.Web.Controllers
         }
 
         // =====================================
-        // 6 - OBTER ID DO USUÁRIO
+        // 11 - USUÁRIO AUTENTICADO
         // =====================================
 
         private string? GetUserId()

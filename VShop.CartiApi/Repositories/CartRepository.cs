@@ -85,14 +85,6 @@ namespace VShop.CartiApi.Repositories
                 return false;
             }
 
-            var subtotal = await _context.CartItems
-                .Where(i => i.CartHeaderId == cartHeader.Id)
-                .Join(_context.Products, i => i.ProductId, p => p.ProductId, (i, p) => p.Price * i.Quantity)
-                .SumAsync();
-            if (subtotal < CouponRules.MinimumSubtotal)
-            {
-                return false;
-            }
 
             var cartItem = await _context.CartItems
                 .FirstOrDefaultAsync(c =>

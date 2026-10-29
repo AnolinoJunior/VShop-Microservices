@@ -1,4 +1,5 @@
 
+using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -16,6 +17,8 @@ var builder = WebApplication.CreateBuilder(args);
 // ===========================
 
 builder.Services.AddControllersWithViews();
+// Duende.AccessTokenManagement.OpenIdConnect é usado para gerenciar tokens de acesso
+builder.Services.AddOpenIdConnectAccessTokenManagement();
 
 // ===========================
 // SERVICES URI
@@ -296,5 +299,5 @@ app.MapControllerRoute(
     pattern:
         "{controller=Home}/{action=Index}/{id?}");
 
-app.Run();
-    
+app.Run(); builder.Services.AddControllersWithViews();
+

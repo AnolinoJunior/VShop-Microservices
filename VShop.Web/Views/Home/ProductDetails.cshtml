@@ -12,49 +12,13 @@
 
     <h3 class="mb-5">Detalhes do Produto</h3>
 
-    <!-- Mensagem de sucesso -->
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show"
-             role="alert">
-
-            <i class="fas fa-check-circle"></i>
-            @TempData["SuccessMessage"]
-
-            <button type="button"
-                    class="btn-close"
-                    data-bs-dismiss="alert"
-                    aria-label="Fechar">
-            </button>
-        </div>
-    }
-
-    <!-- Mensagem de erro -->
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show"
-             role="alert">
-
-            <i class="fas fa-exclamation-circle"></i>
-            @TempData["ErrorMessage"]
-
-            <button type="button"
-                    class="btn-close"
-                    data-bs-dismiss="alert"
-                    aria-label="Fechar">
-            </button>
-        </div>
-    }
-
     <div class="row">
 
         <!-- Imagem do produto -->
         <div class="col-md-4 mb-4">
-
             <img class="img-fluid"
                  src="@Url.Content($"~/images/products/{Model.ImageUrl}")"
                  alt="@Model.Name" />
-
         </div>
 
         <!-- Informações do produto -->
@@ -115,7 +79,6 @@
                         </button>
 
                     </div>
-
                 </div>
 
                 <!-- Total estimado -->
@@ -145,7 +108,6 @@
                             Back to List
 
                         </a>
-
                     </div>
 
                     <!-- Adicionar ao carrinho -->
@@ -158,7 +120,6 @@
                             Add to Cart
 
                         </button>
-
                     </div>
 
                 </div>
@@ -166,15 +127,13 @@
             </form>
 
         </div>
-
     </div>
-
 </div>
 
 @section Scripts {
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", function() {
 
             const quantityInput =
                 document.getElementById("quantity");
@@ -189,7 +148,7 @@
                 document.getElementById("totalPrice");
 
             const unitPrice = @Model.Price.ToString(
-                            System.Globalization.CultureInfo.InvariantCulture);
+                                            System.Globalization.CultureInfo.InvariantCulture);
 
             function updateTotal() {
 
@@ -210,7 +169,7 @@
                     });
             }
 
-            decreaseButton.addEventListener("click", function () {
+            decreaseButton.addEventListener("click", function() {
 
                 let quantity = Number(quantityInput.value);
 
@@ -223,7 +182,7 @@
                 updateTotal();
             });
 
-            increaseButton.addEventListener("click", function () {
+            increaseButton.addEventListener("click", function() {
 
                 let quantity = Number(quantityInput.value);
 
@@ -243,5 +202,4 @@
             updateTotal();
         });
     </script>
-
 }

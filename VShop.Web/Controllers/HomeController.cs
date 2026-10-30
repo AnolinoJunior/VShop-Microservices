@@ -1,4 +1,5 @@
 
+using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -37,8 +38,7 @@ namespace VShop.Web.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Index()
         {
-            var token = await HttpContext.GetTokenAsync(
-                "access_token");
+            var token = await GetAccessToken();
 
             var products = await _productService.GetAllProducts(
                 token ?? string.Empty);
@@ -64,8 +64,7 @@ namespace VShop.Web.Controllers
                 return BadRequest();
             }
 
-            var token = await HttpContext.GetTokenAsync(
-                "access_token");
+            var token = await GetAccessToken();
 
             var product = await _productService.FindProductById(
                 id,
@@ -95,12 +94,10 @@ namespace VShop.Web.Controllers
                 return BadRequest();
             }
 
-            // Obtém o identificador do usuário
-            // autenticado no IdentityServer.
+            // Obtém o identificador do usuário autenticado.
             var userId =
                 User.FindFirstValue("sub")
-                ?? User.FindFirstValue(
-                    ClaimTypes.NameIdentifier);
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrWhiteSpace(userId))
             {
@@ -108,12 +105,16 @@ namespace VShop.Web.Controllers
                     OpenIdConnectDefaults.AuthenticationScheme);
             }
 
-            // Obtém o access token do usuário.
-            var token = await HttpContext.GetTokenAsync(
-                "access_token");
+            // Obtém o access token atualizado.
+            var token = await GetAccessToken();
 
             if (string.IsNullOrWhiteSpace(token))
             {
+                _logger.LogWarning(
+                    "Não foi possível obter um access token válido " +
+                    "para o usuário {UserId}.",
+                    userId);
+
                 return Challenge(
                     OpenIdConnectDefaults.AuthenticationScheme);
             }
@@ -128,8 +129,7 @@ namespace VShop.Web.Controllers
                 return NotFound();
             }
 
-            // Monta o carrinho que será enviado
-            // para o microsserviço CartApi.
+            // Monta o carrinho.
             var cartVM = new CartViewModel
             {
                 CartHeader = new CartHeaderViewModel
@@ -149,10 +149,9 @@ namespace VShop.Web.Controllers
             };
 
             // Envia o produto para a CartApi.
-            var updatedCart =
-                await _cartService.AddItemToCartAsync(
-                    cartVM,
-                    token);
+            var updatedCart = await _cartService.AddItemToCartAsync(
+                cartVM,
+                token);
 
             if (updatedCart == null)
             {
@@ -205,14 +204,20 @@ namespace VShop.Web.Controllers
         public IActionResult CreateAccount()
         {
             if (User.Identity?.IsAuthenticated == true)
+            {
                 return RedirectToAction(nameof(Index));
+            }
 
             var properties = new AuthenticationProperties
             {
                 RedirectUri = Url.Action(nameof(Index), "Home")
             };
+
             properties.Items["vshop_register"] = "1";
-            return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
+
+            return Challenge(
+                properties,
+                OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         // =====================================
@@ -253,6 +258,33 @@ namespace VShop.Web.Controllers
                     Activity.Current?.Id
                     ?? HttpContext.TraceIdentifier
             });
+        }
+
+        // =====================================
+        // 9 - GERENCIAMENTO DO TOKEN JWT
+        // =====================================
+
+        private async Task<string?> GetAccessToken()
+        {
+            // Visitantes anônimos não possuem access token.
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return null;
+            }
+
+            // Obtém o token e renova quando necessário.
+            var result = await HttpContext.GetUserAccessTokenAsync();
+
+            if (!result.Succeeded)
+            {
+                _logger.LogWarning(
+                    "Falha ao obter ou renovar o access token " +
+                    "do usuário autenticado.");
+
+                return null;
+            }
+
+            return result.Token?.AccessToken;
         }
     }
 }
